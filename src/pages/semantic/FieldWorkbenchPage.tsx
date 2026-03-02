@@ -53,10 +53,10 @@ export const FieldWorkbenchPage: React.FC = () => {
 
   const [selectedField, setSelectedField] = React.useState<string | null>(fieldId);
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-  const [confidenceFilter, setConfidenceFilter] = React.useState<'ALL' | 'HIGH' | 'MED' | 'LOW'>('ALL');
+  const [confidenceFilter, setConfidenceFilter] = React.useState<'ALL' | '高' | '中' | '低'>('ALL');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isEditing, setIsEditing] = React.useState(false);
-  const [activeDrawer, setActiveDrawer] = React.useState<'EVIDENCE' | 'ALL_EVIDENCE' | 'GATE' | null>(null);
+  const [activeDrawer, setActiveDrawer] = React.useState<'EVIDENCE' | 'ALL_EVIDENCE' | 'GATE' | 'CANDIDATES' | null>(null);
   const [activeModal, setActiveModal] = React.useState<'BATCH_PREVIEW' | 'REANALYZE' | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<'IDLE' | 'SAVING' | 'SUCCESS'>('IDLE');
@@ -77,16 +77,21 @@ export const FieldWorkbenchPage: React.FC = () => {
   };
 
   const handleAcceptTop2 = () => {
+    handleSwitchPlan('DIM', 'CODE');
+  };
+
+  const handleSwitchPlan = (type: string, role: string) => {
     setIsSaving(true);
     setSaveStatus('SAVING');
     setTimeout(() => {
       setFields(prev => prev.map(f => 
-        f.id === currentField.id ? { ...f, type: 'DIM', role: 'CODE', route: 'AUTO_PASS' as QueueType } : f
+        f.id === currentField.id ? { ...f, type, role, route: 'AUTO_PASS' as QueueType } : f
       ));
       setIsSaving(false);
       setSaveStatus('SUCCESS');
       setTimeout(() => setSaveStatus('IDLE'), 2000);
       setIsEditing(false);
+      setActiveDrawer(null);
     }, 400);
   };
 
@@ -152,11 +157,48 @@ export const FieldWorkbenchPage: React.FC = () => {
   };
 
   const getConfidenceLevel = (conf: number) => {
-    if (conf >= 0.9) return 'HIGH';
-    if (conf >= 0.7) return 'MED';
-    return 'LOW';
+    if (conf >= 0.9) return '高';
+    if (conf >= 0.7) return '中';
+    return '低';
   };
 
+  const typeMap: Record<string, string> = {
+    'ID': '标识',
+    'DIM': '维度',
+    'MEASURE': '度量',
+    'TIME': '时间',
+    'UNKNOWN': '未知'
+  };
+
+  const roleMap: Record<string, string> = {
+    'PK': '主键',
+    'FK': '外键',
+    'UK': '唯一键',
+    'STATUS': '状态',
+    'CODE': '代码',
+    'VALUE': '数值',
+    'CONTACT': '联系方式',
+    'EVENT_TIME': '事件时间',
+    'AUDIT': '审计时间',
+    'PARTITION': '分区键',
+    'PHONE': '电话',
+    'NONE': '无'
+  };
+
+  const queueMap: Record<string, string> = {
+    'CONFLICT': '冲突',
+    'ANOMALY': '异常',
+    'NEEDS_CONFIRM': '待确认',
+    'AUTO_PASS': '自动通过',
+    'IGNORE_CANDIDATE': '已忽略',
+    'ALL': '全部'
+  };
+
+  const riskMap: Record<string, string> = {
+    'PII': '敏感数据',
+    'KeyField': '关键字段',
+    'HighImpact': '高影响'
+  };
   const filteredFields = fields
     .filter(f => queue === 'ALL' || f.route === queue)
     .filter(f => confidenceFilter === 'ALL' || getConfidenceLevel(f.confidence) === confidenceFilter)
@@ -238,7 +280,7 @@ export const FieldWorkbenchPage: React.FC = () => {
               <span className="text-sm font-bold text-slate-200">retail_orders_lv</span>
               <span className="text-[10px] text-slate-500 font-mono bg-slate-800 px-1.5 py-0.5 rounded">retail.sales.orders</span>
               <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-[9px] font-bold uppercase tracking-wider">
-                DRAFT
+                草稿
               </span>
             </div>
           </div>
@@ -300,7 +342,7 @@ export const FieldWorkbenchPage: React.FC = () => {
             className="flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 px-2 py-1 rounded transition-colors"
           >
             <ShieldCheck size={14} className="text-rose-400" />
-            <span className="text-slate-400">门禁 (MUST):</span>
+            <span className="text-slate-400">门禁 (强制):</span>
             <span className="font-bold text-rose-400">2 个未解决</span>
           </div>
           <div className="w-px h-3 bg-slate-800"></div>
@@ -362,7 +404,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                 />
               </div>
               <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5">
-                {['HIGH', 'MED', 'LOW'].map((level) => (
+                {['高', '中', '低'].map((level) => (
                   <button
                     key={level}
                     onClick={() => setConfidenceFilter(prev => prev === level ? 'ALL' : level as any)}
@@ -413,23 +455,23 @@ export const FieldWorkbenchPage: React.FC = () => {
                           <span className="text-[9px] text-slate-500 font-mono bg-slate-800/50 px-1 rounded uppercase">{f.dataType}</span>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          {f.route === 'CONFLICT' && <span className="px-1 py-0.5 bg-rose-500/10 text-rose-400 rounded text-[8px] font-bold">CONFLICT</span>}
-                          {f.route === 'ANOMALY' && <span className="px-1 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[8px] font-bold">ANOMALY</span>}
+                          {f.route === 'CONFLICT' && <span className="px-1 py-0.5 bg-rose-500/10 text-rose-400 rounded text-[8px] font-bold">冲突</span>}
+                          {f.route === 'ANOMALY' && <span className="px-1 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[8px] font-bold">异常</span>}
                         </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
                         {/* CurrentDecisionBadge */}
                         <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-800 rounded text-[9px] font-bold text-slate-300 border border-slate-700">
-                          <span>{f.type}</span>
+                          <span>{typeMap[f.type] || f.type}</span>
                           <span className="text-slate-600">/</span>
-                          <span>{f.role}</span>
+                          <span>{roleMap[f.role] || f.role}</span>
                         </div>
 
                         {/* ConfidenceLevel */}
                         <div className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
-                          getConfidenceLevel(f.confidence) === 'HIGH' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                          getConfidenceLevel(f.confidence) === 'MED' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                          getConfidenceLevel(f.confidence) === '高' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                          getConfidenceLevel(f.confidence) === '中' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                           'bg-rose-500/10 text-rose-400 border-rose-500/20'
                         }`}>
                           {getConfidenceLevel(f.confidence)} ({(f.confidence * 100).toFixed(0)}%)
@@ -449,7 +491,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                             risk === 'KeyField' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                             'bg-orange-500/10 text-orange-400 border-orange-500/20'
                           }`}>
-                            {risk}
+                            {riskMap[risk] || risk}
                           </div>
                         ))}
                       </div>
@@ -530,19 +572,19 @@ export const FieldWorkbenchPage: React.FC = () => {
                 <span className="text-xs text-slate-500">当前裁决:</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">{currentField.type}</span>
+                <span className="text-sm font-bold text-white">{typeMap[currentField.type] || currentField.type}</span>
                 <span className="text-slate-600">/</span>
-                <span className="text-sm font-bold text-white">{currentField.role}</span>
+                <span className="text-sm font-bold text-white">{roleMap[currentField.role] || currentField.role}</span>
                 <span className="text-xs text-slate-400 ml-2">({currentField.name === 'order_id' ? '订单ID' : '字段业务名'})</span>
               </div>
               <div className="flex items-center gap-2 px-2 py-0.5 bg-slate-800 rounded text-[10px] font-bold text-slate-500 border border-slate-700">
-                来源: SYSTEM
+                来源: 系统
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">Rollback</button>
+              <button className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">回滚</button>
               <div className="w-px h-3 bg-slate-800"></div>
-              <button className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">OpenAudit</button>
+              <button className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">审计日志</button>
             </div>
           </div>
 
@@ -561,21 +603,21 @@ export const FieldWorkbenchPage: React.FC = () => {
                 {/* Top1PackageCard (Large) */}
                 <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 px-3 py-1 bg-indigo-500 text-white text-[10px] font-bold rounded-bl-xl">
-                    TOP 1 RECOMMENDATION
+                    TOP 1 推荐方案
                   </div>
                   
                   <div className="flex items-start justify-between mb-6">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl font-bold text-white">{currentField.type}</span>
+                        <span className="text-xl font-bold text-white">{typeMap[currentField.type] || currentField.type}</span>
                         <span className="text-slate-600 text-xl">/</span>
-                        <span className="text-xl font-bold text-white">{currentField.role}</span>
+                        <span className="text-xl font-bold text-white">{roleMap[currentField.role] || currentField.role}</span>
                       </div>
                       <p className="text-lg font-bold text-indigo-400">{currentField.name === 'order_id' ? '订单主键 ID' : '业务名称'}</p>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-mono font-bold text-emerald-400">{(currentField.confidence * 100).toFixed(0)}%</div>
-                      <div className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Confidence</div>
+                      <div className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">置信度</div>
                     </div>
                   </div>
 
@@ -618,8 +660,8 @@ export const FieldWorkbenchPage: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-slate-200">DIM / CODE</span>
-                        <span className="text-[10px] text-slate-500 font-mono">65% Conf.</span>
+                        <span className="text-sm font-bold text-slate-200">维度 / 代码</span>
+                        <span className="text-[10px] text-slate-500 font-mono">65% 置信度</span>
                       </div>
                       <p className="text-xs text-slate-500">备选方案：作为普通维度代码处理</p>
                     </div>
@@ -634,7 +676,10 @@ export const FieldWorkbenchPage: React.FC = () => {
                 </div>
 
                 {/* MoreCandidatesAccordion */}
-                <button className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase tracking-widest">
+                <button 
+                  onClick={() => setActiveDrawer('CANDIDATES')}
+                  className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-600 hover:text-slate-400 transition-colors uppercase tracking-widest"
+                >
                   <ChevronDown size={14} />
                   查看更多备选方案 (3)
                 </button>
@@ -668,12 +713,12 @@ export const FieldWorkbenchPage: React.FC = () => {
                         {ev.icon}
                       </div>
                       <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${ev.source === 'RULE' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}`}>
-                        {ev.source}
+                        {ev.source === 'RULE' ? '规则' : '模型'}
                       </span>
                     </div>
                     <div>
                       <p className="text-xs font-bold text-slate-200">{ev.title}</p>
-                      <p className="text-[10px] text-emerald-400 font-bold mt-1">+{ev.contribution}% Contribution</p>
+                      <p className="text-[10px] text-emerald-400 font-bold mt-1">+{ev.contribution}% 贡献度</p>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {ev.signals.map(s => (
@@ -762,11 +807,11 @@ export const FieldWorkbenchPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">语义类型</p>
-                      <p className="text-sm font-bold text-white">{currentField.type}</p>
+                      <p className="text-sm font-bold text-white">{typeMap[currentField.type] || currentField.type}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">字段角色</p>
-                      <p className="text-sm font-bold text-white">{currentField.role}</p>
+                      <p className="text-sm font-bold text-white">{roleMap[currentField.role] || currentField.role}</p>
                     </div>
                   </div>
 
@@ -861,7 +906,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                         <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.type === type ? 'border-indigo-500' : 'border-slate-700'}`}>
                           {editValues.type === type && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
                         </div>
-                        <span className="text-xs font-bold">{type}</span>
+                        <span className="text-xs font-bold">{typeMap[type] || type}</span>
                       </label>
                     ))}
                   </div>
@@ -901,7 +946,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                         <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.role === role ? 'border-indigo-500' : 'border-slate-700'}`}>
                           {editValues.role === role && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
                         </div>
-                        <span className="text-xs font-bold">{role}</span>
+                        <span className="text-xs font-bold">{roleMap[role] || role}</span>
                       </label>
                     ))}
                   </div>
@@ -1030,7 +1075,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                   <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px] font-bold">置信度: 98%</span>
                 </div>
                 <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
-                  <p className="text-sm font-bold text-slate-200">字段名 order_id 与标准库中的 OrderID 语义高度匹配</p>
+                  <p className="text-sm font-bold text-slate-200">字段名 {currentField.name} 与标准库中的 {currentField.name === 'order_id' ? '订单ID' : '标准字段'} 语义高度匹配</p>
                   <p className="text-xs text-slate-400 leading-relaxed">
                     基于模糊匹配算法与语义嵌入模型，该字段在词法与语义层面上均与标准模型中的主键定义一致。
                   </p>
@@ -1038,12 +1083,12 @@ export const FieldWorkbenchPage: React.FC = () => {
               </section>
 
               <section className="space-y-4">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">关键信号 (Signals)</span>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">关键信号 (信号)</span>
                 <div className="space-y-2">
                   {[
-                    { label: 'Name Similarity', value: '0.98', desc: 'Levenshtein distance & Semantic embedding' },
-                    { label: 'Type Compatibility', value: 'MATCH', desc: 'BIGINT matches standard INTEGER/LONG' },
-                    { label: 'Contextual Match', value: 'HIGH', desc: 'Found in "orders" table context' },
+                    { label: '名称相似度', value: '0.98', desc: '编辑距离与语义嵌入' },
+                    { label: '类型兼容性', value: '匹配', desc: 'BIGINT 匹配标准 INTEGER/LONG' },
+                    { label: '上下文匹配', value: '高', desc: '在 "orders" 表上下文中发现' },
                   ].map(s => (
                     <div key={s.label} className="flex items-center justify-between p-3 bg-slate-900/50 border border-slate-800 rounded-lg">
                       <div>
@@ -1100,14 +1145,14 @@ export const FieldWorkbenchPage: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
               <div className="grid grid-cols-1 gap-3">
                 {[
-                  { dim: 'Metadata Alignment', status: 'COVERED', score: 98, icon: <Database size={16} /> },
-                  { dim: 'Data Profiling', status: 'COVERED', score: 85, icon: <BarChart3 size={16} /> },
-                  { dim: 'Lineage Topology', status: 'COVERED', score: 72, icon: <Share2 size={16} /> },
-                  { dim: 'Sample Analysis', status: 'MISSING', score: 0, icon: <List size={16} /> },
-                  { dim: 'Standard Dictionary', status: 'COVERED', score: 95, icon: <Book size={16} /> },
-                  { dim: 'Historical Decision', status: 'COVERED', score: 60, icon: <History size={16} /> },
-                  { dim: 'Business Context', status: 'COVERED', score: 45, icon: <Brain size={16} /> },
-                  { dim: 'User Feedback', status: 'MISSING', score: 0, icon: <Info size={16} /> },
+                  { dim: '元数据对齐', status: 'COVERED', score: 98, icon: <Database size={16} /> },
+                  { dim: '数据画像', status: 'COVERED', score: 85, icon: <BarChart3 size={16} /> },
+                  { dim: '血缘拓扑', status: 'COVERED', score: 72, icon: <Share2 size={16} /> },
+                  { dim: '样本分析', status: 'MISSING', score: 0, icon: <List size={16} /> },
+                  { dim: '标准词典', status: 'COVERED', score: 95, icon: <Book size={16} /> },
+                  { dim: '历史裁决', status: 'COVERED', score: 60, icon: <History size={16} /> },
+                  { dim: '业务上下文', status: 'COVERED', score: 45, icon: <Brain size={16} /> },
+                  { dim: '用户反馈', status: 'MISSING', score: 0, icon: <Info size={16} /> },
                 ].map((d, i) => (
                   <div key={i} className={`p-4 rounded-xl border transition-all flex items-center justify-between ${
                     d.status === 'COVERED' ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-slate-950 border-slate-800/50 opacity-60'
@@ -1197,6 +1242,95 @@ export const FieldWorkbenchPage: React.FC = () => {
         </div>
       )}
 
+      {/* Candidates Drawer */}
+      {activeDrawer === 'CANDIDATES' && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setActiveDrawer(null)}></div>
+          <div className="relative w-[480px] h-full bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <Brain className="text-indigo-400" size={20} />
+                <h2 className="text-lg font-bold text-white">语义备选方案列表</h2>
+              </div>
+              <button onClick={() => setActiveDrawer(null)} className="p-2 hover:bg-slate-800 rounded-lg text-slate-500 transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 bg-indigo-500/5 border-b border-slate-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">当前分析字段</span>
+                <span className="text-[10px] font-mono text-indigo-400">{currentField.name}</span>
+              </div>
+              <p className="text-xs text-slate-400">
+                AI 基于元数据、样本数据及血缘关系共生成了 5 个可能的语义定义方案。
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              {[
+                { type: 'ID', role: 'PK', conf: 0.98, desc: 'Top 1: 订单主键，具有极高的唯一性和业务关联度。' },
+                { type: 'DIM', role: 'CODE', conf: 0.65, desc: 'Top 2: 业务代码，作为普通维度属性进行切分。' },
+                { type: 'MEASURE', role: 'VALUE', conf: 0.32, desc: 'Top 3: 数值度量，可能代表某种计数值。' },
+                { type: 'TIME', role: 'AUDIT', conf: 0.15, desc: 'Top 4: 审计时间，记录数据变更的物理时间。' },
+                { type: 'UNKNOWN', role: 'NONE', conf: 0.05, desc: 'Top 5: 无法识别，建议人工介入深度分析。' },
+              ].map((cand, idx) => (
+                <div 
+                  key={idx} 
+                  className={`p-4 bg-slate-950 border rounded-xl space-y-3 transition-all ${
+                    currentField.type === cand.type && currentField.role === cand.role
+                      ? 'border-indigo-500 bg-indigo-500/5'
+                      : 'border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-200">{typeMap[cand.type] || cand.type} / {roleMap[cand.role] || cand.role}</span>
+                        {idx === 0 && <span className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded text-[9px] font-bold">推荐方案</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-1 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-500" style={{ width: `${cand.conf * 100}%` }}></div>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">{(cand.conf * 100).toFixed(0)}% 置信度</span>
+                      </div>
+                    </div>
+                    {currentField.type === cand.type && currentField.role === cand.role ? (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                        <CheckCircle2 size={12} /> 当前应用
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={() => handleSwitchPlan(cand.type, cand.role)}
+                        disabled={isSaving}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold border border-slate-700 transition-all disabled:opacity-50"
+                      >
+                        切换到此方案
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed">{cand.desc}</p>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-6 border-t border-slate-800 bg-slate-950/50">
+              <button 
+                onClick={() => {
+                  setActiveDrawer(null);
+                  setIsEditing(true);
+                }}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700 flex items-center justify-center gap-2"
+              >
+                <Wand2 size={14} />
+                手动自定义方案
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* BatchPreviewModal */}
       {activeModal === 'BATCH_PREVIEW' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
@@ -1234,9 +1368,9 @@ export const FieldWorkbenchPage: React.FC = () => {
                       {fields.filter(f => selectedIds.includes(f.id)).map(f => (
                         <tr key={f.id} className="hover:bg-white/5 transition-colors">
                           <td className="px-4 py-3 font-mono text-slate-300">{f.name}</td>
-                          <td className="px-4 py-3 text-slate-500">UNKNOWN</td>
+                          <td className="px-4 py-3 text-slate-500">未知</td>
                           <td className="px-4 py-3"><ArrowRight size={12} className="text-slate-600" /></td>
-                          <td className="px-4 py-3 font-bold text-emerald-400">{f.type} / {f.role}</td>
+                          <td className="px-4 py-3 font-bold text-emerald-400">{typeMap[f.type] || f.type} / {roleMap[f.role] || f.role}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1267,7 +1401,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">门禁状态变化</h4>
                   <div className="p-4 bg-slate-950 border border-slate-800 rounded-2xl space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-400">MUST 冲突</span>
+                      <span className="text-xs text-slate-400">强制冲突</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-500 line-through">2</span>
                         <ArrowRight size={10} className="text-slate-600" />
@@ -1324,7 +1458,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                   <label className="p-4 bg-slate-950 border border-indigo-500/50 rounded-2xl cursor-pointer hover:border-indigo-500 transition-all group">
                     <input type="radio" name="depth" defaultChecked className="hidden" />
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-white">FAST</span>
+                      <span className="text-sm font-bold text-white">快速 (FAST)</span>
                       <div className="w-4 h-4 rounded-full border-2 border-indigo-500 flex items-center justify-center">
                         <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
                       </div>
@@ -1334,7 +1468,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                   <label className="p-4 bg-slate-950 border border-slate-800 rounded-2xl cursor-pointer hover:border-slate-700 transition-all group">
                     <input type="radio" name="depth" className="hidden" />
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-slate-400 group-hover:text-white transition-colors">DEEP</span>
+                      <span className="text-sm font-bold text-slate-400 group-hover:text-white transition-colors">深度 (DEEP)</span>
                       <div className="w-4 h-4 rounded-full border-2 border-slate-800 flex items-center justify-center"></div>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-relaxed">包含全量数据采样与 LLM 语义分析，预计耗时 5-10min。</p>
@@ -1346,7 +1480,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">高级选项</h4>
                 <div className="space-y-3">
                   <label className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl cursor-pointer hover:bg-slate-900 transition-all">
-                    <span className="text-xs text-slate-300">跳过数据采样 (Skip Sampling)</span>
+                    <span className="text-xs text-slate-300">跳过数据采样</span>
                     <input type="checkbox" className="rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500/50" />
                   </label>
                   <label className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl cursor-pointer hover:bg-slate-900 transition-all">
@@ -1374,7 +1508,7 @@ export const FieldWorkbenchPage: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-[10px] text-slate-500">
             <History size={12} />
-            <span>最近分析: 2 分钟前 by L2 Engine</span>
+            <span>最近分析: 2 分钟前 由 L2 引擎</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
