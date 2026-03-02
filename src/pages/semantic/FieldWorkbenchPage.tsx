@@ -66,6 +66,41 @@ export const FieldWorkbenchPage: React.FC = () => {
   const [expandedGroups, setExpandedGroups] = React.useState<string[]>([]);
   const [showMoreRoles, setShowMoreRoles] = React.useState(false);
   const [expandedRoleGroups, setExpandedRoleGroups] = React.useState<string[]>(['键与关系 (Keys & Relations)', '分析建模 (Analytics)']);
+  const [isRoleLocked, setIsRoleLocked] = React.useState(false);
+  const [linkageMessage, setLinkageMessage] = React.useState<string | null>(null);
+
+  const compatibilityMap: Record<string, { whitelist: string[], defaultRole: string }> = {
+    'TIME': {
+      whitelist: ['EVENT_TIME', 'AUDIT_FIELD', 'PARTITION_KEY', 'DIMENSION', 'AUDIT', 'PARTITION'],
+      defaultRole: 'EVENT_TIME'
+    },
+    'MEASURE': {
+      whitelist: ['MEASURE', 'DIMENSION', 'AUDIT_FIELD', 'VALUE'],
+      defaultRole: 'MEASURE'
+    },
+    'ID': {
+      whitelist: ['PRIMARY_KEY', 'FOREIGN_KEY', 'BUSINESS_KEY', 'DIMENSION', 'PK', 'FK', 'UK'],
+      defaultRole: 'PRIMARY_KEY'
+    },
+    'DIM': {
+      whitelist: ['DIMENSION', 'SOFT_DELETE', 'DEGENERATE_DIM', 'TECHNICAL', 'IGNORE', 'STATUS', 'CODE', 'VALUE', 'CONTACT', 'PHONE'],
+      defaultRole: 'DIMENSION'
+    },
+    'UNKNOWN': {
+      whitelist: ['DIMENSION', 'TECHNICAL', 'IGNORE', 'NONE'],
+      defaultRole: 'NONE'
+    }
+  };
+
+  const checkCompatibility = (type: string, role: string) => {
+    const rules = compatibilityMap[type];
+    if (!rules) return 'UNKNOWN';
+    if (rules.whitelist.includes(role)) {
+      if (rules.defaultRole === role) return 'HIGH';
+      return 'MED';
+    }
+    return 'LOW';
+  };
 
   const roleTaxonomy = [
     {
@@ -174,8 +209,49 @@ export const FieldWorkbenchPage: React.FC = () => {
     );
   };
 
+  const handleTypeChange = (newType: string, newRole?: string) => {
+    setEditValues(prev => {
+      const rules = compatibilityMap[newType];
+      const targetRole = newRole || prev.role;
+      
+      if (rules && !rules.whitelist.includes(targetRole)) {
+        if (!isRoleLocked) {
+          setLinkageMessage(`字段角色已不兼容（${newType} × ${targetRole}）。已为你推荐 ${rules.defaultRole}。`);
+          setTimeout(() => setLinkageMessage(null), 4000);
+          return { ...prev, type: newType, role: rules.defaultRole };
+        } else {
+          setLinkageMessage(`注意：当前锁定的角色 ${targetRole} 与类型 ${newType} 不兼容。`);
+          setTimeout(() => setLinkageMessage(null), 4000);
+          return { ...prev, type: newType };
+        }
+      }
+      
+      if (!newRole) {
+        setLinkageMessage(`已根据语义类型 ${newType} 过滤字段角色候选。`);
+        setTimeout(() => setLinkageMessage(null), 3000);
+      }
+      return { ...prev, type: newType, role: targetRole };
+    });
+  };
+
+  const handleRoleChange = (newRole: string) => {
+    setEditValues(prev => {
+      let recommendedType = '';
+      if (['MEASURE', 'VALUE'].includes(newRole)) recommendedType = 'MEASURE';
+      else if (['EVENT_TIME', 'AUDIT_FIELD', 'PARTITION_KEY', 'AUDIT', 'PARTITION'].includes(newRole)) recommendedType = 'TIME';
+      else if (['PRIMARY_KEY', 'FOREIGN_KEY', 'BUSINESS_KEY', 'PK', 'FK', 'UK'].includes(newRole)) recommendedType = 'ID';
+      
+      if (recommendedType && prev.type !== recommendedType) {
+        setLinkageMessage(`你选择了角色 ${newRole}，语义类型更可能是 ${recommendedType}（已为你排序置顶）。`);
+        setTimeout(() => setLinkageMessage(null), 4000);
+      }
+      
+      return { ...prev, role: newRole };
+    });
+  };
+
   const handleSelectTaxonomy = (code: string, role: string) => {
-    setEditValues(prev => ({ ...prev, type: code, role: role }));
+    handleTypeChange(code, role);
     setShowAllTypes(false);
   };
 
@@ -1005,6 +1081,13 @@ export const FieldWorkbenchPage: React.FC = () => {
                 </button>
               </div>
 
+              {linkageMessage && (
+                <div className="mx-6 mt-4 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+                  <Info size={14} className="text-indigo-400 mt-0.5" />
+                  <p className="text-xs text-indigo-300 leading-relaxed">{linkageMessage}</p>
+                </div>
+              )}
+
               <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                 {/* Section 1: 语义类型 */}
                 <section className="space-y-4">
@@ -1022,7 +1105,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                     <div className="space-y-3">
                       {/* Top 1 Recommendation */}
                       <label 
-                        onClick={() => setEditValues(prev => ({ ...prev, type: currentField.type, role: currentField.role }))}
+                        onClick={() => handleTypeChange(currentField.type, currentField.role)}
                         className={`block p-3 rounded-xl border cursor-pointer transition-all ${
                           editValues.type === currentField.type && editValues.role === currentField.role
                             ? 'bg-indigo-500/10 border-indigo-500/50' 
@@ -1050,7 +1133,7 @@ export const FieldWorkbenchPage: React.FC = () => {
 
                       {/* Top 2 Candidate */}
                       <label 
-                        onClick={() => setEditValues(prev => ({ ...prev, type: 'DIM', role: 'CODE' }))}
+                        onClick={() => handleTypeChange('DIM', 'CODE')}
                         className={`block p-3 rounded-xl border cursor-pointer transition-all ${
                           editValues.type === 'DIM' && editValues.role === 'CODE'
                             ? 'bg-indigo-500/10 border-indigo-500/50' 
@@ -1145,7 +1228,18 @@ export const FieldWorkbenchPage: React.FC = () => {
                 {/* Section 2: 字段角色 */}
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Section 2: 字段角色</h4>
+                    <div className="flex items-center gap-3">
+                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Section 2: 字段角色</h4>
+                      <label className="flex items-center gap-1.5 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          onClick={() => setIsRoleLocked(!isRoleLocked)}
+                          className={`w-6 h-3.5 rounded-full transition-colors relative ${isRoleLocked ? 'bg-indigo-500' : 'bg-slate-700'}`}
+                        >
+                          <div className={`absolute top-0.5 bottom-0.5 w-2.5 rounded-full bg-white transition-all ${isRoleLocked ? 'left-3' : 'left-0.5'}`}></div>
+                        </div>
+                        <span className="text-[10px] text-slate-400">锁定角色</span>
+                      </label>
+                    </div>
                     <button 
                       onClick={() => setShowMoreRoles(!showMoreRoles)}
                       className="text-[10px] font-bold text-indigo-400 flex items-center gap-1 hover:text-indigo-300 transition-colors"
@@ -1158,7 +1252,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                     <div className="space-y-3">
                       {/* Top 1 Role */}
                       <label 
-                        onClick={() => setEditValues(prev => ({ ...prev, role: currentField.role }))}
+                        onClick={() => handleRoleChange(currentField.role)}
                         className={`block p-3 rounded-xl border cursor-pointer transition-all ${
                           editValues.role === currentField.role
                             ? 'bg-indigo-500/10 border-indigo-500/50' 
@@ -1184,7 +1278,7 @@ export const FieldWorkbenchPage: React.FC = () => {
 
                       {/* Top 2 Role Candidate */}
                       <label 
-                        onClick={() => setEditValues(prev => ({ ...prev, role: editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION' }))}
+                        onClick={() => handleRoleChange(editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION')}
                         className={`block p-3 rounded-xl border cursor-pointer transition-all ${
                           editValues.role === (editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION')
                             ? 'bg-indigo-500/10 border-indigo-500/50' 
@@ -1212,6 +1306,14 @@ export const FieldWorkbenchPage: React.FC = () => {
                     <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                       {roleTaxonomy.map(group => {
                         const isExpanded = expandedRoleGroups.includes(group.group);
+                        const visibleItems = group.items.filter(item => {
+                          if (isRoleLocked) return true;
+                          const rules = compatibilityMap[editValues.type];
+                          return !rules || rules.whitelist.includes(item.code);
+                        });
+                        
+                        if (visibleItems.length === 0) return null;
+
                         return (
                           <div key={group.group} className="border border-slate-800 rounded-xl overflow-hidden">
                             <button 
@@ -1224,10 +1326,12 @@ export const FieldWorkbenchPage: React.FC = () => {
                             
                             {isExpanded && (
                               <div className="p-2 bg-slate-950 space-y-1">
-                                {group.items.map(item => (
+                                {visibleItems.map(item => {
+                                  const compat = checkCompatibility(editValues.type, item.code);
+                                  return (
                                   <label
                                     key={item.code}
-                                    onClick={() => setEditValues(prev => ({ ...prev, role: item.code }))}
+                                    onClick={() => handleRoleChange(item.code)}
                                     className={`flex flex-col p-3 rounded-lg border cursor-pointer transition-all group ${
                                       editValues.role === item.code 
                                         ? 'bg-indigo-500/10 border-indigo-500/50' 
@@ -1244,6 +1348,9 @@ export const FieldWorkbenchPage: React.FC = () => {
                                           {item.name}
                                         </span>
                                         {item.advanced && <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[8px] font-bold">高级</span>}
+                                        {compat === 'HIGH' && <span className="text-[10px] text-emerald-400 flex items-center gap-0.5"><CheckCircle2 size={10}/> 兼容</span>}
+                                        {compat === 'MED' && <span className="text-[10px] text-amber-400 flex items-center gap-0.5"><AlertTriangle size={10}/> 弱兼容</span>}
+                                        {compat === 'LOW' && <span className="text-[10px] text-rose-400 flex items-center gap-0.5"><X size={10}/> 不兼容</span>}
                                       </div>
                                       <span className="text-[9px] text-slate-500 font-mono">{item.code}</span>
                                     </div>
@@ -1256,7 +1363,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                                       </div>
                                     </div>
                                   </label>
-                                ))}
+                                )})}
                               </div>
                             )}
                           </div>
