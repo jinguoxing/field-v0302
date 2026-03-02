@@ -60,6 +60,7 @@ export const FieldWorkbenchPage: React.FC = () => {
   const [activeModal, setActiveModal] = React.useState<'BATCH_PREVIEW' | 'REANALYZE' | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<'IDLE' | 'SAVING' | 'SUCCESS'>('IDLE');
+  const [showHistory, setShowHistory] = React.useState(false);
 
   const [showAllTypes, setShowAllTypes] = React.useState(false);
   const [semanticSearchQuery, setSemanticSearchQuery] = React.useState('');
@@ -260,13 +261,24 @@ export const FieldWorkbenchPage: React.FC = () => {
     setIsSaving(true);
     setSaveStatus('SAVING');
     setTimeout(() => {
+      const oldState = fields.find(f => f.id === currentField.id)!;
+      const newState = { ...oldState, route: 'AUTO_PASS' as QueueType };
+      
       setFields(prev => prev.map(f => 
-        f.id === currentField.id ? { ...f, route: 'AUTO_PASS' as QueueType } : f
+        f.id === currentField.id ? newState : f
       ));
+      recordHistory(currentField.id, '确认推荐方案', oldState, newState);
+      
       setIsSaving(false);
       setSaveStatus('SUCCESS');
       setTimeout(() => setSaveStatus('IDLE'), 2000);
       setIsEditing(false);
+
+      // Auto-jump to next field
+      const currentIndex = filteredFields.findIndex(f => f.id === selectedField);
+      if (currentIndex !== -1 && currentIndex < filteredFields.length - 1) {
+        handleFieldSelect(filteredFields[currentIndex + 1].id);
+      }
     }, 400);
   };
 
@@ -278,14 +290,25 @@ export const FieldWorkbenchPage: React.FC = () => {
     setIsSaving(true);
     setSaveStatus('SAVING');
     setTimeout(() => {
+      const oldState = fields.find(f => f.id === currentField.id)!;
+      const newState = { ...oldState, type, role, route: 'AUTO_PASS' as QueueType };
+
       setFields(prev => prev.map(f => 
-        f.id === currentField.id ? { ...f, type, role, route: 'AUTO_PASS' as QueueType } : f
+        f.id === currentField.id ? newState : f
       ));
+      recordHistory(currentField.id, '切换并确认方案', oldState, newState);
+
       setIsSaving(false);
       setSaveStatus('SUCCESS');
       setTimeout(() => setSaveStatus('IDLE'), 2000);
       setIsEditing(false);
       setActiveDrawer(null);
+
+      // Auto-jump to next field
+      const currentIndex = filteredFields.findIndex(f => f.id === selectedField);
+      if (currentIndex !== -1 && currentIndex < filteredFields.length - 1) {
+        handleFieldSelect(filteredFields[currentIndex + 1].id);
+      }
     }, 400);
   };
 
@@ -293,9 +316,14 @@ export const FieldWorkbenchPage: React.FC = () => {
     setIsSaving(true);
     setSaveStatus('SAVING');
     setTimeout(() => {
+      const oldState = fields.find(f => f.id === currentField.id)!;
+      const newState = { ...oldState, type: editValues.type, role: editValues.role };
+
       setFields(prev => prev.map(f => 
-        f.id === currentField.id ? { ...f, type: editValues.type, role: editValues.role } : f
+        f.id === currentField.id ? newState : f
       ));
+      recordHistory(currentField.id, '保存草案', oldState, newState);
+
       setIsSaving(false);
       setSaveStatus('SUCCESS');
       setTimeout(() => setSaveStatus('IDLE'), 2000);
@@ -306,10 +334,14 @@ export const FieldWorkbenchPage: React.FC = () => {
     setIsSaving(true);
     setSaveStatus('SAVING');
     setTimeout(() => {
+      const oldState = fields.find(f => f.id === currentField.id)!;
+      const newState = { ...oldState, type: editValues.type, role: editValues.role, route: 'AUTO_PASS' as QueueType };
+
       // Update current field
       setFields(prev => prev.map(f => 
-        f.id === currentField.id ? { ...f, type: editValues.type, role: editValues.role, route: 'AUTO_PASS' as QueueType } : f
+        f.id === currentField.id ? newState : f
       ));
+      recordHistory(currentField.id, '确认并进入下一项', oldState, newState);
       
       setIsSaving(false);
       setSaveStatus('SUCCESS');
@@ -317,10 +349,51 @@ export const FieldWorkbenchPage: React.FC = () => {
       setIsEditing(false);
       
       // Find next field in queue
-      const currentIndex = fields.findIndex(f => f.id === selectedField);
-      if (currentIndex !== -1 && currentIndex < fields.length - 1) {
-        setSelectedField(fields[currentIndex + 1].id);
+      const currentIndex = filteredFields.findIndex(f => f.id === selectedField);
+      if (currentIndex !== -1 && currentIndex < filteredFields.length - 1) {
+        handleFieldSelect(filteredFields[currentIndex + 1].id);
       }
+    }, 400);
+  };
+
+  const handleBatchPassHighConfidence = () => {
+    setIsSaving(true);
+    setSaveStatus('SAVING');
+    setTimeout(() => {
+      setFields(prev => {
+        const newFields = [...prev];
+        newFields.forEach((f, idx) => {
+          if (f.confidence >= 0.9 && f.route !== 'AUTO_PASS') {
+            const newState = { ...f, route: 'AUTO_PASS' as QueueType };
+            newFields[idx] = newState;
+            recordHistory(f.id, '一键高置信通过', f, newState);
+          }
+        });
+        return newFields;
+      });
+      setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
+    }, 600);
+  };
+
+  const handleRollback = (snapshot: FieldItem) => {
+    setIsSaving(true);
+    setSaveStatus('SAVING');
+    setTimeout(() => {
+      const oldState = fields.find(f => f.id === currentField.id)!;
+      const newState = { ...snapshot };
+
+      setFields(prev => prev.map(f => f.id === currentField.id ? newState : f));
+      recordHistory(currentField.id, '回滚版本', oldState, newState);
+      
+      // Update editValues if in edit mode
+      setEditValues(prev => ({ ...prev, type: newState.type, role: newState.role }));
+
+      setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
+      setShowHistory(false);
     }, 400);
   };
 
@@ -338,6 +411,23 @@ export const FieldWorkbenchPage: React.FC = () => {
   ];
 
   const [fields, setFields] = React.useState<FieldItem[]>(initialFields);
+
+  const [historyMap, setHistoryMap] = React.useState<Record<string, any[]>>(() => {
+    const map: Record<string, any[]> = {};
+    initialFields.forEach(f => {
+      map[f.id] = [
+        {
+          id: `init-${f.id}`,
+          timestamp: new Date(Date.now() - 120000).toLocaleString(), // 2 mins ago
+          operator: 'L2 引擎',
+          action: 'AI 初始推荐',
+          changes: {},
+          snapshot: { ...f }
+        }
+      ];
+    });
+    return map;
+  });
 
   const getQueueOrder = (q: string) => {
     const order: Record<string, number> = {
@@ -404,6 +494,31 @@ export const FieldWorkbenchPage: React.FC = () => {
     'KeyField': '关键字段',
     'HighImpact': '高影响'
   };
+
+  const recordHistory = (fieldId: string, action: string, oldState: FieldItem, newState: FieldItem) => {
+    const changes: any = {};
+    if (oldState.type !== newState.type) changes.type = { from: typeMap[oldState.type] || oldState.type, to: typeMap[newState.type] || newState.type };
+    if (oldState.role !== newState.role) changes.role = { from: roleMap[oldState.role] || oldState.role, to: roleMap[newState.role] || newState.role };
+    if (oldState.route !== newState.route) changes.route = { from: queueMap[oldState.route] || oldState.route, to: queueMap[newState.route] || newState.route };
+
+    if (Object.keys(changes).length === 0 && action !== '回滚版本') return;
+
+    setHistoryMap(prev => ({
+      ...prev,
+      [fieldId]: [
+        {
+          id: Date.now().toString(),
+          timestamp: new Date().toLocaleString(),
+          operator: '当前用户',
+          action,
+          changes,
+          snapshot: { ...newState }
+        },
+        ...(prev[fieldId] || [])
+      ]
+    }));
+  };
+
   const filteredFields = fields
     .filter(f => queue === 'ALL' || f.route === queue)
     .filter(f => confidenceFilter === 'ALL' || getConfidenceLevel(f.confidence) === confidenceFilter)
@@ -516,8 +631,12 @@ export const FieldWorkbenchPage: React.FC = () => {
               </label>
             </div>
             
-            <button className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
-              <Sparkles size={14} />
+            <button 
+              onClick={handleBatchPassHighConfidence}
+              disabled={isSaving}
+              className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isSaving ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
               一键高置信通过
             </button>
             
@@ -787,9 +906,9 @@ export const FieldWorkbenchPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">回滚</button>
+              <button onClick={() => setShowHistory(true)} className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">回滚</button>
               <div className="w-px h-3 bg-slate-800"></div>
-              <button className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">审计日志</button>
+              <button onClick={() => setShowHistory(true)} className="text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors">审计日志</button>
             </div>
           </div>
 
@@ -1073,12 +1192,17 @@ export const FieldWorkbenchPage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <button 
-                  onClick={() => setIsEditing(false)}
-                  className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-all"
-                >
-                  <X size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowHistory(true)} className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-indigo-400 transition-all" title="审计日志">
+                    <History size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setIsEditing(false)}
+                    className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 transition-all"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
               {linkageMessage && (
@@ -1941,6 +2065,74 @@ export const FieldWorkbenchPage: React.FC = () => {
           </button>
         </div>
       </footer>
+      {/* History Modal */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setShowHistory(false)}></div>
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl">
+                  <History size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">审计日志与回滚</h3>
+                  <p className="text-xs text-slate-500 mt-1">字段: {currentField?.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-slate-800 rounded-lg text-slate-500 transition-all">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh] custom-scrollbar space-y-6">
+              <div className="relative border-l border-slate-800 ml-4 space-y-6 pb-4">
+                {(historyMap[currentField.id] || []).map((entry, idx) => (
+                  <div key={entry.id} className="relative pl-6">
+                    <div className="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-slate-900 border-2 border-indigo-500"></div>
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-slate-200">{entry.action}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{entry.operator}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">{entry.timestamp}</span>
+                      </div>
+                      
+                      {/* Changes */}
+                      {Object.keys(entry.changes).length > 0 && (
+                        <div className="mt-3 space-y-2 bg-slate-950 rounded-lg p-3 border border-slate-800/50">
+                          {Object.entries(entry.changes).map(([key, val]: any) => (
+                            <div key={key} className="flex items-center gap-2 text-xs">
+                              <span className="text-slate-500 w-12">{key === 'type' ? '类型' : key === 'role' ? '角色' : key === 'route' ? '状态' : key}:</span>
+                              <span className="text-rose-400 line-through opacity-70">{val.from}</span>
+                              <ArrowRight size={12} className="text-slate-600" />
+                              <span className="text-emerald-400">{val.to}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Rollback Button */}
+                      {idx !== 0 && (
+                        <div className="mt-4 flex justify-end">
+                          <button 
+                            onClick={() => handleRollback(entry.snapshot)}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5"
+                          >
+                            <History size={12} />
+                            回滚至此版本
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
