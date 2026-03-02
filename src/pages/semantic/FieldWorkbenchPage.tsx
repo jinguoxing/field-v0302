@@ -61,6 +61,124 @@ export const FieldWorkbenchPage: React.FC = () => {
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<'IDLE' | 'SAVING' | 'SUCCESS'>('IDLE');
 
+  const [showAllTypes, setShowAllTypes] = React.useState(false);
+  const [semanticSearchQuery, setSemanticSearchQuery] = React.useState('');
+  const [expandedGroups, setExpandedGroups] = React.useState<string[]>([]);
+  const [showMoreRoles, setShowMoreRoles] = React.useState(false);
+  const [expandedRoleGroups, setExpandedRoleGroups] = React.useState<string[]>(['键与关系 (Keys & Relations)', '分析建模 (Analytics)']);
+
+  const roleTaxonomy = [
+    {
+      group: '键与关系 (Keys & Relations)',
+      items: [
+        { code: 'PRIMARY_KEY', name: '主键', desc: '唯一标识一行记录', example: '如 order_id', evidence: 'Unique Constraint' },
+        { code: 'FOREIGN_KEY', name: '外键', desc: '关联其他表的主键', example: '如 user_id', evidence: 'Join Condition' },
+        { code: 'BUSINESS_KEY', name: '业务主键', desc: '业务上的唯一标识', example: '如 order_sn', evidence: 'High Cardinality' }
+      ]
+    },
+    {
+      group: '分析建模 (Analytics)',
+      items: [
+        { code: 'DIMENSION', name: '维度', desc: '用于分组或过滤的属性', example: '如 status, type', evidence: 'Group By / Where' },
+        { code: 'MEASURE', name: '度量', desc: '用于聚合计算的数值', example: '如 amount, count', evidence: 'Sum / Avg' },
+        { code: 'DEGENERATE_DIM', name: '退化维度', desc: '没有对应维度表的维度属性', example: '如 order_no (订单号)', evidence: 'Group By without Join', advanced: true }
+      ]
+    },
+    {
+      group: '时间与分区 (Time & Partition)',
+      items: [
+        { code: 'EVENT_TIME', name: '事件时间', desc: '业务事件发生的物理时间', example: '如 create_time', evidence: 'Time Filter' },
+        { code: 'PARTITION_KEY', name: '分区键', desc: '用于物理表分区的字段', example: '如 dt, p_date', evidence: 'Partition Pruning' },
+        { code: 'AUDIT_FIELD', name: '审计字段', desc: '记录数据变更的时间或人员', example: '如 update_time', evidence: 'System Generated' }
+      ]
+    },
+    {
+      group: '治理与技术 (Governance & Technical)',
+      items: [
+        { code: 'SOFT_DELETE', name: '软删除', desc: '标记记录是否被删除', example: '如 is_deleted', evidence: 'Filter in all queries' },
+        { code: 'TECHNICAL', name: '技术字段', desc: 'ETL过程产生的技术字段', example: '如 etl_job_id', evidence: 'No business usage' },
+        { code: 'IGNORE', name: '忽略', desc: '业务无意义+低使用+低证据的最终处置', example: '如 temp_col', evidence: 'No usage' }
+      ]
+    }
+  ];
+
+  const toggleRoleGroup = (group: string) => {
+    setExpandedRoleGroups(prev => 
+      prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]
+    );
+  };
+
+  const semanticTaxonomy = [
+    {
+      group: '标识类',
+      items: [
+        { code: 'ID', role: 'PK', name: '主键/外键', highFreq: true },
+        { code: 'DIM', role: 'CODE', name: '业务代码', highFreq: true },
+        { code: 'ID', role: 'UK', name: 'UUID/哈希', highFreq: false }
+      ]
+    },
+    {
+      group: '名称文本类',
+      items: [
+        { code: 'DIM', role: 'VALUE', name: '名称', highFreq: true },
+        { code: 'DIM', role: 'VALUE', name: '短文本', highFreq: true },
+        { code: 'DIM', role: 'VALUE', name: '长描述', highFreq: false }
+      ]
+    },
+    {
+      group: '时间类',
+      items: [
+        { code: 'TIME', role: 'EVENT_TIME', name: '日期', highFreq: true },
+        { code: 'TIME', role: 'EVENT_TIME', name: '日期时间', highFreq: true },
+        { code: 'TIME', role: 'AUDIT', name: '时间', highFreq: false },
+        { code: 'MEASURE', role: 'VALUE', name: '时长', highFreq: false }
+      ]
+    },
+    {
+      group: '金额数量类',
+      items: [
+        { code: 'MEASURE', role: 'VALUE', name: '金额', highFreq: true },
+        { code: 'MEASURE', role: 'VALUE', name: '数量', highFreq: true },
+        { code: 'MEASURE', role: 'VALUE', name: '单价', highFreq: false },
+        { code: 'MEASURE', role: 'VALUE', name: '百分比', highFreq: false }
+      ]
+    },
+    {
+      group: '状态枚举类',
+      items: [
+        { code: 'DIM', role: 'STATUS', name: '状态', highFreq: true },
+        { code: 'DIM', role: 'CODE', name: '枚举', highFreq: true },
+        { code: 'DIM', role: 'STATUS', name: '布尔标志', highFreq: false }
+      ]
+    },
+    {
+      group: '联系方式网络类',
+      items: [
+        { code: 'DIM', role: 'PHONE', name: '电话', highFreq: true },
+        { code: 'DIM', role: 'CONTACT', name: '邮箱', highFreq: true },
+        { code: 'DIM', role: 'CONTACT', name: 'IP地址', highFreq: false },
+        { code: 'DIM', role: 'CONTACT', name: '链接', highFreq: false }
+      ]
+    },
+    {
+      group: '未知',
+      items: [
+        { code: 'UNKNOWN', role: 'NONE', name: '未知', highFreq: true }
+      ]
+    }
+  ];
+
+  const toggleGroup = (group: string) => {
+    setExpandedGroups(prev => 
+      prev.includes(group) ? prev.filter(g => g !== group) : [...prev, group]
+    );
+  };
+
+  const handleSelectTaxonomy = (code: string, role: string) => {
+    setEditValues(prev => ({ ...prev, type: code, role: role }));
+    setShowAllTypes(false);
+  };
+
   // Action Handlers
   const handleConfirmTop1 = () => {
     setIsSaving(true);
@@ -182,7 +300,18 @@ export const FieldWorkbenchPage: React.FC = () => {
     'AUDIT': '审计时间',
     'PARTITION': '分区键',
     'PHONE': '电话',
-    'NONE': '无'
+    'NONE': '无',
+    'PRIMARY_KEY': '主键',
+    'FOREIGN_KEY': '外键',
+    'BUSINESS_KEY': '业务主键',
+    'DIMENSION': '维度',
+    'MEASURE': '度量',
+    'DEGENERATE_DIM': '退化维度',
+    'PARTITION_KEY': '分区键',
+    'AUDIT_FIELD': '审计字段',
+    'SOFT_DELETE': '软删除',
+    'TECHNICAL': '技术字段',
+    'IGNORE': '忽略'
   };
 
   const queueMap: Record<string, string> = {
@@ -881,75 +1010,260 @@ export const FieldWorkbenchPage: React.FC = () => {
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Section 1: 语义类型</h4>
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-600" size={10} />
-                      <input 
-                        type="text" 
-                        placeholder="搜索所有类型..." 
-                        className="bg-slate-950 border border-slate-800 rounded px-6 py-1 text-[10px] text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
+                    <button 
+                      onClick={() => setShowAllTypes(!showAllTypes)}
+                      className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                      {showAllTypes ? '收起全量类型' : '完整类型检索'}
+                    </button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
-                    {['ID', 'DIM', 'MEASURE', 'TIME', 'UNKNOWN'].map((type) => (
+                  {!showAllTypes ? (
+                    <div className="space-y-3">
+                      {/* Top 1 Recommendation */}
                       <label 
-                        key={type}
-                        onClick={() => setEditValues(prev => ({ ...prev, type }))}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                          editValues.type === type 
-                            ? 'bg-indigo-500/10 border-indigo-500/50 text-white' 
-                            : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700'
+                        onClick={() => setEditValues(prev => ({ ...prev, type: currentField.type, role: currentField.role }))}
+                        className={`block p-3 rounded-xl border cursor-pointer transition-all ${
+                          editValues.type === currentField.type && editValues.role === currentField.role
+                            ? 'bg-indigo-500/10 border-indigo-500/50' 
+                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
                         }`}
                       >
-                        <input type="radio" name="type" checked={editValues.type === type} readOnly className="hidden" />
-                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.type === type ? 'border-indigo-500' : 'border-slate-700'}`}>
-                          {editValues.type === type && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <input type="radio" checked={editValues.type === currentField.type && editValues.role === currentField.role} readOnly className="hidden" />
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${editValues.type === currentField.type && editValues.role === currentField.role ? 'border-indigo-500' : 'border-slate-700'}`}>
+                              {editValues.type === currentField.type && editValues.role === currentField.role && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
+                            </div>
+                            <span className={`text-sm font-bold ${editValues.type === currentField.type && editValues.role === currentField.role ? 'text-white' : 'text-slate-300'}`}>
+                              {typeMap[currentField.type] || currentField.type} / {roleMap[currentField.role] || currentField.role}
+                            </span>
+                          </div>
+                          <span className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded text-[9px] font-bold">推荐</span>
                         </div>
-                        <span className="text-xs font-bold">{typeMap[type] || type}</span>
+                        <div className="flex flex-wrap gap-1.5 pl-5.5">
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">命名 98%</span>
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">画像 100%</span>
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">血缘关联</span>
+                        </div>
                       </label>
-                    ))}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {['标识', '文本', '时间', '金额数量', '状态枚举', '网络联系', '未知'].map(group => (
-                      <button key={group} className="px-2 py-0.5 bg-slate-800/50 hover:bg-slate-800 text-slate-500 rounded text-[9px] font-medium border border-slate-700/50 transition-colors">
-                        {group}
+
+                      {/* Top 2 Candidate */}
+                      <label 
+                        onClick={() => setEditValues(prev => ({ ...prev, type: 'DIM', role: 'CODE' }))}
+                        className={`block p-3 rounded-xl border cursor-pointer transition-all ${
+                          editValues.type === 'DIM' && editValues.role === 'CODE'
+                            ? 'bg-indigo-500/10 border-indigo-500/50' 
+                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <input type="radio" checked={editValues.type === 'DIM' && editValues.role === 'CODE'} readOnly className="hidden" />
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${editValues.type === 'DIM' && editValues.role === 'CODE' ? 'border-indigo-500' : 'border-slate-700'}`}>
+                              {editValues.type === 'DIM' && editValues.role === 'CODE' && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
+                            </div>
+                            <span className={`text-sm font-bold ${editValues.type === 'DIM' && editValues.role === 'CODE' ? 'text-white' : 'text-slate-300'}`}>
+                              维度 / 代码
+                            </span>
+                          </div>
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-bold">备选</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pl-5.5">
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">标准库匹配</span>
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">命名 65%</span>
+                        </div>
+                      </label>
+
+                      <button 
+                        onClick={() => setActiveDrawer('CANDIDATES')}
+                        className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-slate-300 transition-colors uppercase tracking-widest border border-dashed border-slate-800 rounded-xl hover:border-slate-700"
+                      >
+                        <ChevronDown size={14} />
+                        更多候选 (3)
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                        <input 
+                          type="text" 
+                          value={semanticSearchQuery}
+                          onChange={(e) => setSemanticSearchQuery(e.target.value)}
+                          placeholder="搜索中文名 / CODE / 别名 / 分组..." 
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                        {semanticTaxonomy.map(group => {
+                          const isExpanded = expandedGroups.includes(group.group) || semanticSearchQuery.length > 0;
+                          const filteredItems = group.items.filter(item => 
+                            item.name.includes(semanticSearchQuery) || 
+                            item.code.includes(semanticSearchQuery.toUpperCase()) ||
+                            group.group.includes(semanticSearchQuery)
+                          );
+
+                          if (semanticSearchQuery && filteredItems.length === 0) return null;
+
+                          return (
+                            <div key={group.group} className="border border-slate-800 rounded-xl overflow-hidden">
+                              <button 
+                                onClick={() => toggleGroup(group.group)}
+                                className="w-full flex items-center justify-between p-3 bg-slate-900/80 hover:bg-slate-800 transition-colors"
+                              >
+                                <span className="text-xs font-bold text-slate-300">{group.group}</span>
+                                {isExpanded ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
+                              </button>
+                              
+                              {isExpanded && (
+                                <div className="p-2 bg-slate-950 space-y-1">
+                                  {filteredItems.map(item => (
+                                    <button
+                                      key={`${item.code}-${item.role}-${item.name}`}
+                                      onClick={() => handleSelectTaxonomy(item.code, item.role)}
+                                      className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-indigo-500/10 text-left group transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-slate-300 group-hover:text-indigo-400">{item.name}</span>
+                                        <span className="text-[10px] text-slate-600 font-mono">{item.code}</span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">选择</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </section>
 
                 {/* Section 2: 字段角色 */}
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Section 2: 字段角色</h4>
-                    <button className="text-[10px] font-bold text-indigo-400 flex items-center gap-1">
-                      更多角色 <ChevronDown size={10} />
+                    <button 
+                      onClick={() => setShowMoreRoles(!showMoreRoles)}
+                      className="text-[10px] font-bold text-indigo-400 flex items-center gap-1 hover:text-indigo-300 transition-colors"
+                    >
+                      {showMoreRoles ? '收起角色' : '更多角色'} {showMoreRoles ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
-                    {(editValues.type === 'TIME' ? ['EVENT_TIME', 'AUDIT', 'PARTITION'] : 
-                      editValues.type === 'ID' ? ['PK', 'FK', 'UK'] :
-                      ['STATUS', 'CODE', 'VALUE', 'CONTACT']).map((role) => (
+                  {!showMoreRoles ? (
+                    <div className="space-y-3">
+                      {/* Top 1 Role */}
                       <label 
-                        key={role}
-                        onClick={() => setEditValues(prev => ({ ...prev, role }))}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                          editValues.role === role 
-                            ? 'bg-indigo-500/10 border-indigo-500/50 text-white' 
-                            : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700'
+                        onClick={() => setEditValues(prev => ({ ...prev, role: currentField.role }))}
+                        className={`block p-3 rounded-xl border cursor-pointer transition-all ${
+                          editValues.role === currentField.role
+                            ? 'bg-indigo-500/10 border-indigo-500/50' 
+                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
                         }`}
                       >
-                        <input type="radio" name="role" checked={editValues.role === role} readOnly className="hidden" />
-                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.role === role ? 'border-indigo-500' : 'border-slate-700'}`}>
-                          {editValues.role === role && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <input type="radio" checked={editValues.role === currentField.role} readOnly className="hidden" />
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${editValues.role === currentField.role ? 'border-indigo-500' : 'border-slate-700'}`}>
+                              {editValues.role === currentField.role && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
+                            </div>
+                            <span className={`text-sm font-bold ${editValues.role === currentField.role ? 'text-white' : 'text-slate-300'}`}>
+                              {roleMap[currentField.role] || currentField.role}
+                            </span>
+                          </div>
+                          <span className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded text-[9px] font-bold">推荐</span>
                         </div>
-                        <span className="text-xs font-bold">{roleMap[role] || role}</span>
+                        <div className="flex flex-wrap gap-1.5 pl-5.5">
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">基于血缘推断</span>
+                        </div>
                       </label>
-                    ))}
-                  </div>
+
+                      {/* Top 2 Role Candidate */}
+                      <label 
+                        onClick={() => setEditValues(prev => ({ ...prev, role: editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION' }))}
+                        className={`block p-3 rounded-xl border cursor-pointer transition-all ${
+                          editValues.role === (editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION')
+                            ? 'bg-indigo-500/10 border-indigo-500/50' 
+                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <input type="radio" checked={editValues.role === (editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION')} readOnly className="hidden" />
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${editValues.role === (editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION') ? 'border-indigo-500' : 'border-slate-700'}`}>
+                              {editValues.role === (editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION') && <div className="w-2 h-2 rounded-full bg-indigo-500"></div>}
+                            </div>
+                            <span className={`text-sm font-bold ${editValues.role === (editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION') ? 'text-white' : 'text-slate-300'}`}>
+                              {roleMap[editValues.type === 'TIME' ? 'PARTITION_KEY' : 'DIMENSION'] || (editValues.type === 'TIME' ? '分区键' : '维度')}
+                            </span>
+                          </div>
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-bold">备选</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pl-5.5">
+                          <span className="px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded text-[9px] font-medium border border-slate-700">备选方案</span>
+                        </div>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                      {roleTaxonomy.map(group => {
+                        const isExpanded = expandedRoleGroups.includes(group.group);
+                        return (
+                          <div key={group.group} className="border border-slate-800 rounded-xl overflow-hidden">
+                            <button 
+                              onClick={() => toggleRoleGroup(group.group)}
+                              className="w-full flex items-center justify-between p-3 bg-slate-900/80 hover:bg-slate-800 transition-colors"
+                            >
+                              <span className="text-xs font-bold text-slate-300">{group.group}</span>
+                              {isExpanded ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
+                            </button>
+                            
+                            {isExpanded && (
+                              <div className="p-2 bg-slate-950 space-y-1">
+                                {group.items.map(item => (
+                                  <label
+                                    key={item.code}
+                                    onClick={() => setEditValues(prev => ({ ...prev, role: item.code }))}
+                                    className={`flex flex-col p-3 rounded-lg border cursor-pointer transition-all group ${
+                                      editValues.role === item.code 
+                                        ? 'bg-indigo-500/10 border-indigo-500/50' 
+                                        : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-2">
+                                        <input type="radio" checked={editValues.role === item.code} readOnly className="hidden" />
+                                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.role === item.code ? 'border-indigo-500' : 'border-slate-700'}`}>
+                                          {editValues.role === item.code && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
+                                        </div>
+                                        <span className={`text-xs font-bold ${editValues.role === item.code ? 'text-white' : 'text-slate-300'}`}>
+                                          {item.name}
+                                        </span>
+                                        {item.advanced && <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[8px] font-bold">高级</span>}
+                                      </div>
+                                      <span className="text-[9px] text-slate-500 font-mono">{item.code}</span>
+                                    </div>
+                                    <div className="pl-5 space-y-1">
+                                      <p className="text-[10px] text-slate-400">{item.desc}</p>
+                                      <div className="flex items-center gap-2 text-[9px]">
+                                        <span className="text-slate-500">例子: {item.example}</span>
+                                        <span className="text-slate-600">|</span>
+                                        <span className="text-indigo-400/70">触发: {item.evidence}</span>
+                                      </div>
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </section>
 
                 {/* Section 3: 业务名/描述/场景 */}
