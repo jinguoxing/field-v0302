@@ -30,6 +30,19 @@ interface FieldItem {
   completeness: number;
 }
 
+// Mock Data
+const initialFields: FieldItem[] = [
+  { id: '1', name: 'order_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'PK', confidence: 0.98, gap: 0.85, completeness: 1.0, route: 'AUTO_PASS', isKeyField: true, impact: 95, risks: ['KeyField'] },
+  { id: '2', name: 'cust_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'FK', confidence: 0.92, gap: 0.72, completeness: 0.98, route: 'AUTO_PASS', isKeyField: true, impact: 80, risks: ['KeyField'] },
+  { id: '3', name: 'total_amt', dataType: 'DECIMAL', table: 'orders', type: 'MEASURE', role: 'VALUE', confidence: 0.85, gap: 0.12, completeness: 0.95, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 70, risks: ['HighImpact'] },
+  { id: '4', name: 'order_status', dataType: 'VARCHAR', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.76, gap: 0.05, completeness: 0.88, route: 'CONFLICT', isKeyField: false, impact: 60, risks: [] },
+  { id: '5', name: 'create_time', dataType: 'TIMESTAMP', table: 'orders', type: 'TIME', role: 'EVENT_TIME', confidence: 0.95, gap: 0.90, completeness: 1.0, route: 'AUTO_PASS', isKeyField: false, impact: 50, risks: [] },
+  { id: '6', name: 'discount_code', dataType: 'VARCHAR', table: 'orders', type: 'DIM', role: 'CODE', confidence: 0.45, gap: 0.02, completeness: 0.32, route: 'ANOMALY', isKeyField: false, impact: 30, risks: [] },
+  { id: '7', name: 'temp_col_01', dataType: 'VARCHAR', table: 'orders', type: 'UNKNOWN', role: 'NONE', confidence: 0.12, gap: 0.0, completeness: 0.05, route: 'IGNORE_CANDIDATE', isKeyField: false, impact: 10, risks: [] },
+  { id: '8', name: 'user_phone', dataType: 'VARCHAR', table: 'users', type: 'DIM', role: 'PHONE', confidence: 0.88, gap: 0.15, completeness: 0.90, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 85, risks: ['PII'] },
+  { id: '9', name: 'payment_status', dataType: 'INT', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.65, gap: 0.03, completeness: 0.75, route: 'CONFLICT', isKeyField: false, impact: 65, risks: [] },
+];
+
 export const FieldWorkbenchPage: React.FC = () => {
   const { lvId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,53 +59,74 @@ export const FieldWorkbenchPage: React.FC = () => {
   const [activeDrawer, setActiveDrawer] = React.useState<'EVIDENCE' | 'ALL_EVIDENCE' | 'GATE' | null>(null);
   const [activeModal, setActiveModal] = React.useState<'BATCH_PREVIEW' | 'REANALYZE' | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<'IDLE' | 'SAVING' | 'SUCCESS'>('IDLE');
 
   // Action Handlers
   const handleConfirmTop1 = () => {
     setIsSaving(true);
+    setSaveStatus('SAVING');
     setTimeout(() => {
+      setFields(prev => prev.map(f => 
+        f.id === currentField.id ? { ...f, route: 'AUTO_PASS' as QueueType } : f
+      ));
       setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
       setIsEditing(false);
-      // In a real app, this would update the backend
-      console.log('Confirmed Top 1 for:', currentField.name);
-    }, 600);
+    }, 400);
   };
 
   const handleAcceptTop2 = () => {
     setIsSaving(true);
+    setSaveStatus('SAVING');
     setTimeout(() => {
+      setFields(prev => prev.map(f => 
+        f.id === currentField.id ? { ...f, type: 'DIM', role: 'CODE', route: 'AUTO_PASS' as QueueType } : f
+      ));
       setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
       setIsEditing(false);
-      console.log('Accepted Top 2 for:', currentField.name);
-    }, 600);
+    }, 400);
   };
 
   const handleSaveDraft = () => {
     setIsSaving(true);
+    setSaveStatus('SAVING');
     setTimeout(() => {
+      setFields(prev => prev.map(f => 
+        f.id === currentField.id ? { ...f, type: editValues.type, role: editValues.role } : f
+      ));
       setIsSaving(false);
-      console.log('Saved Draft for:', currentField.name);
-    }, 800);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
+    }, 400);
   };
 
   const handleConfirmAndNext = () => {
     setIsSaving(true);
+    setSaveStatus('SAVING');
     setTimeout(() => {
+      // Update current field
+      setFields(prev => prev.map(f => 
+        f.id === currentField.id ? { ...f, type: editValues.type, role: editValues.role, route: 'AUTO_PASS' as QueueType } : f
+      ));
+      
       setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
       setIsEditing(false);
       
       // Find next field in queue
       const currentIndex = fields.findIndex(f => f.id === selectedField);
-      if (currentIndex < fields.length - 1) {
+      if (currentIndex !== -1 && currentIndex < fields.length - 1) {
         setSelectedField(fields[currentIndex + 1].id);
       }
-      
-      console.log('Confirmed and moving to next from:', currentField.name);
-    }, 600);
+    }, 400);
   };
 
   // Mock Data
-  const fields: FieldItem[] = [
+  const initialFields: FieldItem[] = [
     { id: '1', name: 'order_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'PK', confidence: 0.98, gap: 0.85, completeness: 1.0, route: 'AUTO_PASS', isKeyField: true, impact: 95, risks: ['KeyField'] },
     { id: '2', name: 'cust_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'FK', confidence: 0.92, gap: 0.72, completeness: 0.98, route: 'AUTO_PASS', isKeyField: true, impact: 80, risks: ['KeyField'] },
     { id: '3', name: 'total_amt', dataType: 'DECIMAL', table: 'orders', type: 'MEASURE', role: 'VALUE', confidence: 0.85, gap: 0.12, completeness: 0.95, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 70, risks: ['HighImpact'] },
@@ -103,6 +137,8 @@ export const FieldWorkbenchPage: React.FC = () => {
     { id: '8', name: 'user_phone', dataType: 'VARCHAR', table: 'users', type: 'DIM', role: 'PHONE', confidence: 0.88, gap: 0.15, completeness: 0.90, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 85, risks: ['PII'] },
     { id: '9', name: 'payment_status', dataType: 'INT', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.65, gap: 0.03, completeness: 0.75, route: 'CONFLICT', isKeyField: false, impact: 65, risks: [] },
   ];
+
+  const [fields, setFields] = React.useState<FieldItem[]>(initialFields);
 
   const getQueueOrder = (q: string) => {
     const order: Record<string, number> = {
@@ -150,7 +186,35 @@ export const FieldWorkbenchPage: React.FC = () => {
     );
   };
 
+  // Edit State
+  const [editValues, setEditValues] = React.useState<{
+    type: string;
+    role: string;
+    bizName: string;
+    bizDesc: string;
+    tags: string[];
+  }>({
+    type: '',
+    role: '',
+    bizName: '',
+    bizDesc: '',
+    tags: []
+  });
+
   const currentField = fields.find(f => f.id === selectedField) || fields[0];
+
+  // Sync edit values when entering edit mode or changing field
+  React.useEffect(() => {
+    if (currentField && isEditing) {
+      setEditValues({
+        type: currentField.type,
+        role: currentField.role,
+        bizName: currentField.name === 'order_id' ? '订单主键 ID' : currentField.name,
+        bizDesc: `该字段在表 ${currentField.table} 中表现为唯一标识符，且符合标准模型中的订单主键定义。画像显示其基数与行数完全一致。`,
+        tags: ['Join', 'Metric', 'Filter', 'PII']
+      });
+    }
+  }, [currentField.id, isEditing]);
 
   return (
     <div className="h-screen flex flex-col bg-slate-950 text-slate-200 overflow-hidden">
@@ -676,7 +740,14 @@ export const FieldWorkbenchPage: React.FC = () => {
             /* D1 ReadOnlySummary */
             <div className="flex-1 flex flex-col">
               <div className="p-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">当前裁决详情</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">当前裁决详情</h3>
+                  {saveStatus === 'SUCCESS' && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold animate-in fade-in slide-in-from-left-2">
+                      <CheckCircle2 size={10} /> 已保存
+                    </span>
+                  )}
+                </div>
                 <button 
                   onClick={() => setIsEditing(true)}
                   className="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-[10px] font-bold border border-indigo-500/20 transition-all flex items-center gap-1.5"
@@ -746,6 +817,11 @@ export const FieldWorkbenchPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
                   <h3 className="text-xs font-bold text-white uppercase tracking-widest">编辑语义裁决</h3>
+                  {saveStatus === 'SUCCESS' && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold animate-in fade-in slide-in-from-left-2">
+                      <CheckCircle2 size={10} /> 已保存
+                    </span>
+                  )}
                 </div>
                 <button 
                   onClick={() => setIsEditing(false)}
@@ -771,18 +847,19 @@ export const FieldWorkbenchPage: React.FC = () => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
-                    {[currentField.type, 'DIM', 'MEASURE', 'TIME'].map((type) => (
+                    {['ID', 'DIM', 'MEASURE', 'TIME', 'UNKNOWN'].map((type) => (
                       <label 
                         key={type}
+                        onClick={() => setEditValues(prev => ({ ...prev, type }))}
                         className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                          currentField.type === type 
+                          editValues.type === type 
                             ? 'bg-indigo-500/10 border-indigo-500/50 text-white' 
                             : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700'
                         }`}
                       >
-                        <input type="radio" name="type" checked={currentField.type === type} readOnly className="hidden" />
-                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${currentField.type === type ? 'border-indigo-500' : 'border-slate-700'}`}>
-                          {currentField.type === type && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
+                        <input type="radio" name="type" checked={editValues.type === type} readOnly className="hidden" />
+                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.type === type ? 'border-indigo-500' : 'border-slate-700'}`}>
+                          {editValues.type === type && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
                         </div>
                         <span className="text-xs font-bold">{type}</span>
                       </label>
@@ -808,18 +885,21 @@ export const FieldWorkbenchPage: React.FC = () => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
-                    {[currentField.role, 'AUDIT', 'PARTITION', 'STATUS'].map((role) => (
+                    {(editValues.type === 'TIME' ? ['EVENT_TIME', 'AUDIT', 'PARTITION'] : 
+                      editValues.type === 'ID' ? ['PK', 'FK', 'UK'] :
+                      ['STATUS', 'CODE', 'VALUE', 'CONTACT']).map((role) => (
                       <label 
                         key={role}
+                        onClick={() => setEditValues(prev => ({ ...prev, role }))}
                         className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                          currentField.role === role 
+                          editValues.role === role 
                             ? 'bg-indigo-500/10 border-indigo-500/50 text-white' 
                             : 'bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700'
                         }`}
                       >
-                        <input type="radio" name="role" checked={currentField.role === role} readOnly className="hidden" />
-                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${currentField.role === role ? 'border-indigo-500' : 'border-slate-700'}`}>
-                          {currentField.role === role && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
+                        <input type="radio" name="role" checked={editValues.role === role} readOnly className="hidden" />
+                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${editValues.role === role ? 'border-indigo-500' : 'border-slate-700'}`}>
+                          {editValues.role === role && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
                         </div>
                         <span className="text-xs font-bold">{role}</span>
                       </label>
@@ -836,7 +916,8 @@ export const FieldWorkbenchPage: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-600">业务名称 (BizName)</label>
                       <input 
                         type="text" 
-                        defaultValue={currentField.name === 'order_id' ? '订单主键 ID' : '业务名称'}
+                        value={editValues.bizName}
+                        onChange={(e) => setEditValues(prev => ({ ...prev, bizName: e.target.value }))}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                     </div>
@@ -845,7 +926,8 @@ export const FieldWorkbenchPage: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-600">业务描述 (BizDesc)</label>
                       <textarea 
                         rows={3}
-                        defaultValue="该字段在表 orders 中表现为唯一标识符，且符合标准模型中的订单主键定义。"
+                        value={editValues.bizDesc}
+                        onChange={(e) => setEditValues(prev => ({ ...prev, bizDesc: e.target.value }))}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
                       />
                     </div>
@@ -856,10 +938,18 @@ export const FieldWorkbenchPage: React.FC = () => {
                         {['Join', 'Metric', 'Filter', 'PII', 'Audit'].map(tag => (
                           <button 
                             key={tag}
-                            className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded-lg text-[10px] font-bold border border-indigo-500/20 flex items-center gap-1"
+                            onClick={() => setEditValues(prev => ({
+                              ...prev,
+                              tags: prev.tags.includes(tag) ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag]
+                            }))}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 transition-all ${
+                              editValues.tags.includes(tag)
+                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                : 'bg-slate-900/50 text-slate-500 border-slate-800 hover:border-slate-700'
+                            }`}
                           >
                             {tag}
-                            <X size={10} />
+                            {editValues.tags.includes(tag) && <X size={10} />}
                           </button>
                         ))}
                         <button className="px-2 py-1 bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold border border-slate-700 border-dashed flex items-center gap-1">

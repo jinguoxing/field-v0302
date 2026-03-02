@@ -19,6 +19,7 @@ export default function App() {
         { path: "/graph", label: "图谱视图", icon: Share2 },
         { path: "/semantic-modeling/logical-views", label: "语义建模", icon: TableProperties },
         { path: "/semantic/workbench/default?stage=field", label: "字段裁决", icon: Brain },
+         { path: "/semantic/workbench/default?stage=field", label: "字段裁决v3", icon: Brain },
       ]
     },
     {
