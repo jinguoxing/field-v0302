@@ -26,6 +26,7 @@ import { OpsPage } from './pages/OpsPage';
 import { CollabInboxPage } from './pages/CollabInboxPage';
 import { CollabHistoryPage } from './pages/CollabHistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SemanticConfigPage } from './src/pages/semantic/SemanticConfigPage';
 // AI Ops Workbench
 import { AIOpsWorkbenchPage } from './src/pages/aiops/AIOpsWorkbenchPage';
 import { AIOpsRequestDetailPage } from './src/pages/aiops/AIOpsRequestDetailPage';
@@ -115,6 +116,12 @@ const App: React.FC = () => {
 
           {/* Settings Route */}
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="engine-config" element={<SemanticConfigPage />} />
+          <Route path="engine-config/:versionId/editor" element={<SemanticConfigPage />} />
+          <Route path="engine-config/:versionId/simulate" element={<SemanticConfigPage />} />
+          <Route path="engine-config/:versionId/evaluate" element={<SemanticConfigPage />} />
+          <Route path="engine-config/:versionId/diff" element={<SemanticConfigPage />} />
+          <Route path="engine-config/:versionId/publish" element={<SemanticConfigPage />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

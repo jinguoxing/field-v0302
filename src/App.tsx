@@ -12,6 +12,13 @@ export default function App() {
 
   const menuItems = [
     {
+      section: "系统管理",
+      items: [
+        { path: "/settings", label: "配置中心", icon: Settings },
+        { path: "/engine-config", label: "语义理解配置", icon: Settings },
+      ]
+    },
+    {
       section: "核心模块 (Core Modules)",
       items: [
         { path: "/datasource", label: "数据源管理", icon: Database },
@@ -19,7 +26,6 @@ export default function App() {
         { path: "/graph", label: "图谱视图", icon: Share2 },
         { path: "/semantic-modeling/logical-views", label: "语义建模", icon: TableProperties },
         { path: "/semantic/workbench/default?stage=field", label: "字段裁决", icon: Brain },
-         { path: "/semantic/workbench/default?stage=field", label: "字段裁决v3", icon: Brain },
       ]
     },
     {
@@ -45,12 +51,6 @@ export default function App() {
       items: [
         { path: "/standards", label: "标准总览", icon: ShieldCheck },
       ]
-    },
-    {
-      section: "系统管理",
-      items: [
-        { path: "/settings", label: "配置中心", icon: Settings },
-      ]
     }
   ];
 
@@ -63,15 +63,15 @@ export default function App() {
             <Hexagon className="text-cyan-400 w-5 h-5" fill="currentColor" fillOpacity={0.2} />
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            NEXUS<span className="text-cyan-400">OS</span>
+            NEXUS<span className="text-cyan-400">OS</span> <span className="text-[10px] text-cyan-400/50">v2.2</span>
           </span>
         </div>
 
-        <nav className="flex-1 px-3 py-6 space-y-7 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 py-6 space-y-5 overflow-y-auto custom-scrollbar">
           {menuItems.map((section, idx) => (
             <div key={idx} className="space-y-1.5">
               <h3 className="px-4 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest opacity-80">
-                {section.section}
+                {section.section} {section.section === '系统管理' ? '(TOP)' : ''}
               </h3>
               
               <div className="space-y-0.5">
@@ -81,6 +81,7 @@ export default function App() {
                   return (
                     <Link 
                       key={item.path}
+                      id={`menu-item-${item.label.replace(/\s+/g, '-').toLowerCase()}`}
                       to={item.path} 
                       className={`relative flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group ${
                         isActive 

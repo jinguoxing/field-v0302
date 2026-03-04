@@ -8,6 +8,7 @@ import { AIOpsWorkbenchPage } from './pages/aiops/AIOpsWorkbenchPage';
 import { AIOpsRequestDetailPage } from './pages/aiops/AIOpsRequestDetailPage';
 import { AIOpsStageDetailPage } from './pages/aiops/AIOpsStageDetailPage';
 import { FieldWorkbenchPage } from './pages/semantic/FieldWorkbenchPage';
+import { SemanticConfigPage } from './pages/semantic/SemanticConfigPage';
 
 export const router = createHashRouter([
   {
@@ -38,6 +39,30 @@ export const router = createHashRouter([
       {
         path: 'semantic/workbench/:lvId',
         element: <FieldWorkbenchPage />
+      },
+      {
+        path: 'engine-config',
+        element: <SemanticConfigPage />
+      },
+      {
+        path: 'engine-config/:versionId/editor',
+        element: <SemanticConfigPage />
+      },
+      {
+        path: 'engine-config/:versionId/simulate',
+        element: <SemanticConfigPage />
+      },
+      {
+        path: 'engine-config/:versionId/evaluate',
+        element: <SemanticConfigPage />
+      },
+      {
+        path: 'engine-config/:versionId/diff',
+        element: <SemanticConfigPage />
+      },
+      {
+        path: 'engine-config/:versionId/publish',
+        element: <SemanticConfigPage />
       },
       { path: '*', element: <div className="p-10">404 Not Found</div> }
     ]

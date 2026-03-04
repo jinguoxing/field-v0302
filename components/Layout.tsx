@@ -100,6 +100,7 @@ export const Layout: React.FC = () => {
           <div>
             <p className="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">系统管理</p>
             <SidebarItem to="/settings" icon={<Settings size={18} />} label="配置中心" />
+            <SidebarItem to="/engine-config" icon={<Binary size={18} />} label="语义理解配置" />
           </div>
         </div>
 

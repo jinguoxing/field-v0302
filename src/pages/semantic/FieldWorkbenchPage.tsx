@@ -8,7 +8,8 @@ import {
   Database, Table2, LayoutGrid, List,
   History, Sparkles, Wand2, ShieldCheck,
   ChevronDown, ChevronUp, RefreshCw, X,
-  Share2, Calculator, BarChart3, Book, FileText
+  Share2, Calculator, BarChart3, Book, FileText,
+  Archive
 } from 'lucide-react';
 import { FieldDrawer } from '../../components/semantic/FieldDrawer';
 
@@ -51,7 +52,20 @@ export const FieldWorkbenchPage: React.FC = () => {
   const fieldId = searchParams.get('fieldId');
   const focus = searchParams.get('focus');
 
-  const [selectedField, setSelectedField] = React.useState<string | null>(fieldId);
+  // Mock Data
+  const initialFields: FieldItem[] = [
+    { id: '1', name: 'order_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'PK', confidence: 0.98, gap: 0.85, completeness: 1.0, route: 'AUTO_PASS', isKeyField: true, impact: 95, risks: ['KeyField'] },
+    { id: '2', name: 'cust_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'FK', confidence: 0.92, gap: 0.72, completeness: 0.98, route: 'AUTO_PASS', isKeyField: true, impact: 80, risks: ['KeyField'] },
+    { id: '3', name: 'total_amt', dataType: 'DECIMAL', table: 'orders', type: 'MEASURE', role: 'VALUE', confidence: 0.85, gap: 0.12, completeness: 0.95, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 70, risks: ['HighImpact'] },
+    { id: '4', name: 'order_status', dataType: 'VARCHAR', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.76, gap: 0.05, completeness: 0.88, route: 'CONFLICT', isKeyField: false, impact: 60, risks: [] },
+    { id: '5', name: 'create_time', dataType: 'TIMESTAMP', table: 'orders', type: 'TIME', role: 'EVENT_TIME', confidence: 0.95, gap: 0.90, completeness: 1.0, route: 'AUTO_PASS', isKeyField: false, impact: 50, risks: [] },
+    { id: '6', name: 'discount_code', dataType: 'VARCHAR', table: 'orders', type: 'DIM', role: 'CODE', confidence: 0.45, gap: 0.02, completeness: 0.32, route: 'ANOMALY', isKeyField: false, impact: 30, risks: [] },
+    { id: '7', name: 'temp_col_01', dataType: 'VARCHAR', table: 'orders', type: 'UNKNOWN', role: 'NONE', confidence: 0.12, gap: 0.0, completeness: 0.05, route: 'IGNORE_CANDIDATE', isKeyField: false, impact: 10, risks: [] },
+    { id: '8', name: 'user_phone', dataType: 'VARCHAR', table: 'users', type: 'DIM', role: 'PHONE', confidence: 0.88, gap: 0.15, completeness: 0.90, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 85, risks: ['PII'] },
+    { id: '9', name: 'payment_status', dataType: 'INT', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.65, gap: 0.03, completeness: 0.75, route: 'CONFLICT', isKeyField: false, impact: 65, risks: [] },
+  ];
+
+  const [selectedField, setSelectedField] = React.useState<string | null>(fieldId || initialFields[0]?.id || null);
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [confidenceFilter, setConfidenceFilter] = React.useState<'ALL' | '高' | '中' | '低'>('ALL');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -377,6 +391,59 @@ export const FieldWorkbenchPage: React.FC = () => {
     }, 600);
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredFields.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredFields.map(f => f.id));
+    }
+  };
+
+  const handleBatchIgnore = () => {
+    setIsSaving(true);
+    setSaveStatus('SAVING');
+    setTimeout(() => {
+      setFields(prev => {
+        const newFields = [...prev];
+        newFields.forEach((f, idx) => {
+          if (selectedIds.includes(f.id)) {
+            const newState = { ...f, type: 'UNKNOWN', role: 'IGNORE', route: 'IGNORE_CANDIDATE' as QueueType };
+            newFields[idx] = newState;
+            recordHistory(f.id, '批量忽略', f, newState);
+          }
+        });
+        return newFields;
+      });
+      setSelectedIds([]);
+      setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
+    }, 600);
+  };
+
+  const handleBatchApplySimilar = () => {
+    if (!currentField) return;
+    setIsSaving(true);
+    setSaveStatus('SAVING');
+    setTimeout(() => {
+      setFields(prev => {
+        const newFields = [...prev];
+        newFields.forEach((f, idx) => {
+          if (selectedIds.includes(f.id) && f.id !== currentField.id) {
+            const newState = { ...f, type: currentField.type, role: currentField.role, route: 'AUTO_PASS' as QueueType };
+            newFields[idx] = newState;
+            recordHistory(f.id, '批量应用相似规则', f, newState);
+          }
+        });
+        return newFields;
+      });
+      setSelectedIds([]);
+      setIsSaving(false);
+      setSaveStatus('SUCCESS');
+      setTimeout(() => setSaveStatus('IDLE'), 2000);
+    }, 600);
+  };
+
   const handleRollback = (snapshot: FieldItem) => {
     setIsSaving(true);
     setSaveStatus('SAVING');
@@ -396,19 +463,6 @@ export const FieldWorkbenchPage: React.FC = () => {
       setShowHistory(false);
     }, 400);
   };
-
-  // Mock Data
-  const initialFields: FieldItem[] = [
-    { id: '1', name: 'order_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'PK', confidence: 0.98, gap: 0.85, completeness: 1.0, route: 'AUTO_PASS', isKeyField: true, impact: 95, risks: ['KeyField'] },
-    { id: '2', name: 'cust_id', dataType: 'BIGINT', table: 'orders', type: 'ID', role: 'FK', confidence: 0.92, gap: 0.72, completeness: 0.98, route: 'AUTO_PASS', isKeyField: true, impact: 80, risks: ['KeyField'] },
-    { id: '3', name: 'total_amt', dataType: 'DECIMAL', table: 'orders', type: 'MEASURE', role: 'VALUE', confidence: 0.85, gap: 0.12, completeness: 0.95, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 70, risks: ['HighImpact'] },
-    { id: '4', name: 'order_status', dataType: 'VARCHAR', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.76, gap: 0.05, completeness: 0.88, route: 'CONFLICT', isKeyField: false, impact: 60, risks: [] },
-    { id: '5', name: 'create_time', dataType: 'TIMESTAMP', table: 'orders', type: 'TIME', role: 'EVENT_TIME', confidence: 0.95, gap: 0.90, completeness: 1.0, route: 'AUTO_PASS', isKeyField: false, impact: 50, risks: [] },
-    { id: '6', name: 'discount_code', dataType: 'VARCHAR', table: 'orders', type: 'DIM', role: 'CODE', confidence: 0.45, gap: 0.02, completeness: 0.32, route: 'ANOMALY', isKeyField: false, impact: 30, risks: [] },
-    { id: '7', name: 'temp_col_01', dataType: 'VARCHAR', table: 'orders', type: 'UNKNOWN', role: 'NONE', confidence: 0.12, gap: 0.0, completeness: 0.05, route: 'IGNORE_CANDIDATE', isKeyField: false, impact: 10, risks: [] },
-    { id: '8', name: 'user_phone', dataType: 'VARCHAR', table: 'users', type: 'DIM', role: 'PHONE', confidence: 0.88, gap: 0.15, completeness: 0.90, route: 'NEEDS_CONFIRM', isKeyField: false, impact: 85, risks: ['PII'] },
-    { id: '9', name: 'payment_status', dataType: 'INT', table: 'orders', type: 'DIM', role: 'STATUS', confidence: 0.65, gap: 0.03, completeness: 0.75, route: 'CONFLICT', isKeyField: false, impact: 65, risks: [] },
-  ];
 
   const [fields, setFields] = React.useState<FieldItem[]>(initialFields);
 
@@ -532,6 +586,13 @@ export const FieldWorkbenchPage: React.FC = () => {
       if (b.impact !== a.impact) return b.impact - a.impact;
       return a.confidence - b.confidence;
     });
+
+  // Sync selected field with URL and ensure a field is always selected if possible
+  React.useEffect(() => {
+    if (!selectedField && filteredFields.length > 0) {
+      handleFieldSelect(filteredFields[0].id);
+    }
+  }, [filteredFields, selectedField]);
 
   const handleFieldSelect = (id: string) => {
     setSelectedField(id);
@@ -743,21 +804,49 @@ export const FieldWorkbenchPage: React.FC = () => {
                 ))}
               </div>
             </div>
+            
+            {/* Batch Selection Header */}
+            <div className="flex items-center justify-between px-1">
+              <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 cursor-pointer hover:text-slate-300">
+                <input 
+                  type="checkbox" 
+                  checked={filteredFields.length > 0 && selectedIds.length === filteredFields.length}
+                  onChange={handleSelectAll}
+                  className="rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500/50" 
+                />
+                全选 ({filteredFields.length})
+              </label>
+              {selectedIds.length > 0 && (
+                <button 
+                  onClick={() => setSelectedIds([])} 
+                  className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  取消选择
+                </button>
+              )}
+            </div>
           </div>
 
           {/* FieldList */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="divide-y divide-slate-800/50">
-              {filteredFields.map((f) => (
+              {filteredFields.map((f) => {
+                const isConflict = f.route === 'CONFLICT';
+                const isAnomaly = f.route === 'ANOMALY';
+                const hasIssue = isConflict || isAnomaly;
+                
+                return (
                 <div 
                   key={f.id}
                   onClick={() => handleFieldSelect(f.id)}
                   className={`group p-3 cursor-pointer transition-all relative ${
-                    selectedField === f.id ? 'bg-indigo-500/10' : 'hover:bg-white/5'
+                    selectedField === f.id 
+                      ? hasIssue ? 'bg-rose-500/10' : 'bg-indigo-500/10' 
+                      : hasIssue ? 'hover:bg-rose-500/5 bg-rose-500/5' : 'hover:bg-white/5'
                   }`}
                 >
                   {selectedField === f.id && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_rgba(99,102,241,0.5)] ${hasIssue ? 'bg-rose-500 shadow-rose-500/50' : 'bg-indigo-500'}`}></div>
                   )}
                   
                   <div className="flex items-start gap-3">
@@ -765,7 +854,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                       onClick={(e) => toggleSelect(f.id, e)}
                       className={`mt-1 w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         selectedIds.includes(f.id) 
-                          ? 'bg-indigo-600 border-indigo-500' 
+                          ? hasIssue ? 'bg-rose-600 border-rose-500' : 'bg-indigo-600 border-indigo-500' 
                           : 'border-slate-700 bg-slate-950 group-hover:border-slate-500'
                       }`}
                     >
@@ -775,20 +864,23 @@ export const FieldWorkbenchPage: React.FC = () => {
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-mono font-bold text-slate-200 truncate">{f.name}</span>
+                          <span className={`text-xs font-mono font-bold truncate ${hasIssue && selectedField === f.id ? 'text-rose-200' : 'text-slate-200'}`}>{f.name}</span>
                           <span className="text-[9px] text-slate-500 font-mono bg-slate-800/50 px-1 rounded uppercase">{f.dataType}</span>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          {f.route === 'CONFLICT' && <span className="px-1 py-0.5 bg-rose-500/10 text-rose-400 rounded text-[8px] font-bold">冲突</span>}
-                          {f.route === 'ANOMALY' && <span className="px-1 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[8px] font-bold">异常</span>}
+                          {isConflict && <span className="px-1 py-0.5 bg-rose-500/20 text-rose-300 rounded text-[8px] font-bold border border-rose-500/30 flex items-center gap-0.5"><AlertCircle size={8} /> 冲突</span>}
+                          {isAnomaly && <span className="px-1 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[8px] font-bold border border-amber-500/30 flex items-center gap-0.5"><AlertTriangle size={8} /> 异常</span>}
+                          {f.route === 'AUTO_PASS' && <span className="px-1 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[8px] font-bold flex items-center gap-0.5"><CheckCircle2 size={8} /> 已确认</span>}
                         </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
                         {/* CurrentDecisionBadge */}
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-800 rounded text-[9px] font-bold text-slate-300 border border-slate-700">
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                          hasIssue ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' : 'bg-slate-800 text-slate-300 border-slate-700'
+                        }`}>
                           <span>{typeMap[f.type] || f.type}</span>
-                          <span className="text-slate-600">/</span>
+                          <span className={hasIssue ? 'text-rose-500/50' : 'text-slate-600'}>/</span>
                           <span>{roleMap[f.role] || f.role}</span>
                         </div>
 
@@ -802,7 +894,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                         </div>
 
                         {/* GapChip */}
-                        {f.route === 'CONFLICT' && f.gap !== undefined && (
+                        {isConflict && f.gap !== undefined && (
                           <div className="px-1.5 py-0.5 bg-rose-500/20 text-rose-300 rounded text-[9px] font-bold border border-rose-500/30">
                             Gap: {f.gap.toFixed(2)}
                           </div>
@@ -822,7 +914,7 @@ export const FieldWorkbenchPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
@@ -843,10 +935,26 @@ export const FieldWorkbenchPage: React.FC = () => {
                 >
                   <Sparkles size={14} />
                 </button>
-                <button className="p-1.5 hover:bg-white/10 rounded-lg text-white transition-all" title="应用到相似字段">
+                <button 
+                  onClick={handleBatchApplySimilar}
+                  className="p-1.5 hover:bg-white/10 rounded-lg text-white transition-all" 
+                  title="应用当前字段规则到所选字段"
+                >
                   <Wand2 size={14} />
                 </button>
-                <button className="p-1.5 hover:bg-rose-500/20 rounded-lg text-rose-200 transition-all" title="批量忽略">
+                <button 
+                  onClick={handleBatchIgnore}
+                  className="p-1.5 hover:bg-rose-500/20 rounded-lg text-rose-200 transition-all" 
+                  title="批量忽略"
+                >
+                  <Archive size={14} />
+                </button>
+                <div className="w-px h-4 bg-white/20 mx-1"></div>
+                <button 
+                  onClick={() => setSelectedIds([])}
+                  className="p-1.5 hover:bg-white/10 rounded-lg text-white transition-all" 
+                  title="取消选择"
+                >
                   <X size={14} />
                 </button>
               </div>
