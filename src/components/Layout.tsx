@@ -65,10 +65,7 @@ export const Layout: React.FC = () => {
             </p>
             <div className="space-y-0.5">
                <SidebarItem to="/semantic-models" icon={<TableProperties size={18} />} label="逻辑视图" />
-               <div className="mt-2 mb-1 px-4 flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  <Gavel size={12} /> 字段裁决
-               </div>
-               <SidebarItem to="/semantic/workbench/default?stage=field" icon={<Zap size={14} />} label="字段裁决v3" depth={1} />
+               <SidebarItem to="/semantic/workbench/default?stage=field" icon={<Zap size={18} />} label="字段裁决xxx" />
             </div>
           </div>
 

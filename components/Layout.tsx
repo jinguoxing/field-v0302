@@ -54,7 +54,7 @@ export const Layout: React.FC = () => {
             <SidebarItem to="/fields/t1" icon={<LayoutGrid size={18} />} label="表结构详情" />
             <SidebarItem to="/relationships" icon={<Share2 size={18} />} label="图谱视图" />
             <SidebarItem to="/standards/apply/logical-views" icon={<TableProperties size={18} />} label="语义建模" />
-            <SidebarItem to="/standards/ai/workbench" icon={<Brain size={18} />} label="字段裁决" />
+            <SidebarItem to="/semantic/workbench/default?stage=field" icon={<Brain size={18} />} label="字段裁决" />
           </div>
 
           <div className="mb-6">

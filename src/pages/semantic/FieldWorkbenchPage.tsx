@@ -639,11 +639,56 @@ export const FieldWorkbenchPage: React.FC = () => {
     }
   }, [currentField.id, isEditing]);
 
+  // Early returns for other stages
+  if (stage === 'table') {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-center space-y-6">
+          <div className="p-6 bg-slate-900 rounded-full inline-flex">
+            <Database size={64} className="text-slate-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-400 mb-2">表结构编辑阶段</h2>
+            <p className="text-sm text-slate-500">此功能正在开发中...</p>
+          </div>
+          <button
+            onClick={() => setSearchParams({ stage: 'field' })}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all"
+          >
+            返回字段语义
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (stage === 'object') {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-center space-y-6">
+          <div className="p-6 bg-slate-900 rounded-full inline-flex">
+            <Sparkles size={64} className="text-slate-600" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-400 mb-2">对象生成阶段</h2>
+            <p className="text-sm text-slate-500">此功能正在开发中...</p>
+          </div>
+          <button
+            onClick={() => setSearchParams({ stage: 'field' })}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all"
+          >
+            返回字段语义
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Field stage - main UI
   return (
     <div className="h-screen flex flex-col bg-slate-950 text-slate-200 overflow-hidden">
       {/* TopBar */}
       <header className="border-b border-slate-800 bg-slate-900 flex flex-col px-6 py-3 flex-shrink-0 gap-3">
-        {/* ... existing TopBar content ... */}
         <div className="flex items-center justify-between">
           {/* Left: Breadcrumb & Identity */}
           <div className="flex items-center gap-4">
@@ -669,15 +714,36 @@ export const FieldWorkbenchPage: React.FC = () => {
           {/* Middle: StageStepper */}
           <div className="flex items-center justify-center absolute left-1/2 -translate-x-1/2">
             <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-              <button className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded text-xs font-bold transition-all">
+              <button
+                onClick={() => setSearchParams({ stage: 'field' })}
+                className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+                  !stage || stage === 'field'
+                    ? 'bg-indigo-500/20 text-indigo-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
                 1. 字段语义
               </button>
               <ChevronRight size={14} className="text-slate-600" />
-              <button className="px-3 py-1 text-slate-500 hover:text-slate-300 rounded text-xs font-medium transition-all">
+              <button
+                onClick={() => setSearchParams({ stage: 'table' })}
+                className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                  stage === 'table'
+                    ? 'bg-indigo-500/20 text-indigo-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
                 2. 表结构
               </button>
               <ChevronRight size={14} className="text-slate-600" />
-              <button className="px-3 py-1 text-slate-500 hover:text-slate-300 rounded text-xs font-medium transition-all">
+              <button
+                onClick={() => setSearchParams({ stage: 'object' })}
+                className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                  stage === 'object'
+                    ? 'bg-indigo-500/20 text-indigo-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
                 3. 对象生成
               </button>
             </div>
