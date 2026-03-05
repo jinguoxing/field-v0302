@@ -1,0 +1,160 @@
+syntax = "v1"
+
+info(
+  title: "Semantic Config API"
+  desc: "Config versioning + type dictionary + role dictionary + naming rules (D1)"
+  version: "v1"
+)
+
+type ConfigVersionItem {
+  id int64 `json:"id"`
+  name string `json:"name"`
+  status string `json:"status"` // DRAFT|PUBLISHED|ARCHIVED
+  baseVersionId int64 `json:"base_version_id,optional"`
+  createdAt string `json:"created_at"`
+  updatedAt string `json:"updated_at"`
+}
+
+type TypeGroup {
+  code string `json:"code"`
+  nameZh string `json:"name_zh"`
+  sort int32 `json:"sort"`
+}
+
+type SemanticTypeItem {
+  code string `json:"code"`
+  nameZh string `json:"name_zh"`
+  groupCode string `json:"group_code"`
+  active bool `json:"active"`
+  advanced bool `json:"advanced"`
+  bias float64 `json:"bias"`
+  sort int32 `json:"sort"`
+  aliases []string `json:"aliases"`
+  tooltip string `json:"tooltip,optional"`
+}
+
+type RoleGroup {
+  code string `json:"code"`
+  nameZh string `json:"name_zh"`
+  sort int32 `json:"sort"`
+}
+
+type FieldRoleItem {
+  code string `json:"code"`
+  nameZh string `json:"name_zh"`
+  groupCode string `json:"group_code"`
+  active bool `json:"active"`
+  advanced bool `json:"advanced"`
+  bias float64 `json:"bias"`
+  sort int32 `json:"sort"`
+  tooltip string `json:"tooltip,optional"`
+}
+
+type NamingRuleItem {
+  ruleId string `json:"rule_id"`
+  enabled bool `json:"enabled"`
+  priority int32 `json:"priority"`
+  scope string `json:"scope"` // FIELD|TABLE|BOTH
+  regex string `json:"regex"`
+  title string `json:"title"`
+  summary string `json:"summary,optional"`
+  typeDelta map[string]float64 `json:"type_delta"`
+  roleDelta map[string]float64 `json:"role_delta"`
+}
+
+type ListVersionsReq {}
+type ListVersionsResp { items []ConfigVersionItem `json:"items"` }
+
+type CreateVersionReq { name string `json:"name"`; baseVersionId int64 `json:"base_version_id,optional"` }
+type CreateVersionResp { item ConfigVersionItem `json:"item"` }
+
+type GetVersionReq { id int64 `path:"id"` }
+type GetVersionResp { item ConfigVersionItem `json:"item"` }
+
+type CloneVersionReq { id int64 `path:"id"`; name string `json:"name"` }
+type CloneVersionResp { item ConfigVersionItem `json:"item"` }
+
+type PublishVersionReq { id int64 `path:"id"` }
+type PublishVersionResp { item ConfigVersionItem `json:"item"` }
+
+type GetTypesReq { id int64 `path:"id"` }
+type GetTypesResp { groups []TypeGroup `json:"groups"`; items []SemanticTypeItem `json:"items"` }
+type PutTypesReq { id int64 `path:"id"`; groups []TypeGroup `json:"groups"`; items []SemanticTypeItem `json:"items"` }
+type PutTypesResp { ok bool `json:"ok"` }
+
+type GetRolesReq { id int64 `path:"id"` }
+type GetRolesResp { groups []RoleGroup `json:"groups"`; items []FieldRoleItem `json:"items"` }
+type PutRolesReq { id int64 `path:"id"`; groups []RoleGroup `json:"groups"`; items []FieldRoleItem `json:"items"` }
+type PutRolesResp { ok bool `json:"ok"` }
+
+type GetNamingRulesReq { id int64 `path:"id"` }
+type GetNamingRulesResp { items []NamingRuleItem `json:"items"` }
+type PutNamingRulesReq { id int64 `path:"id"`; items []NamingRuleItem `json:"items"` }
+type PutNamingRulesResp { ok bool `json:"ok"` }
+
+type ValidateReq { id int64 `path:"id"` }
+type ValidateIssue { level string `json:"level"`; path string `json:"path"`; message string `json:"message"` }
+type ValidateResp { ok bool `json:"ok"`; issues []ValidateIssue `json:"issues"` }
+
+type SimulateReq {
+  id int64 `path:"id"`
+  fieldName string `json:"field_name"`
+  tableName string `json:"table_name,optional"`
+  comment string `json:"comment,optional"`
+}
+type SimTopItem { code string `json:"code"`; confidence float64 `json:"confidence"`; raw float64 `json:"raw"` }
+type SimEvidenceItem {
+  ruleId string `json:"rule_id"`
+  title string `json:"title"`
+  regex string `json:"regex"`
+  strength float64 `json:"strength"`
+  typeDelta map[string]float64 `json:"type_delta"`
+  roleDelta map[string]float64 `json:"role_delta"`
+}
+type SimulateResp {
+  matchedRules []SimEvidenceItem `json:"matched_rules"`
+  topTypes []SimTopItem `json:"top_types"`
+  topRoles []SimTopItem `json:"top_roles"`
+}
+
+@server(prefix: /api/semantic/config)
+service semanticconfig {
+  @handler ListVersions
+  get /versions (ListVersionsReq) returns (ListVersionsResp)
+
+  @handler CreateVersion
+  post /versions (CreateVersionReq) returns (CreateVersionResp)
+
+  @handler GetVersion
+  get /versions/:id (GetVersionReq) returns (GetVersionResp)
+
+  @handler CloneVersion
+  post /versions/:id/clone (CloneVersionReq) returns (CloneVersionResp)
+
+  @handler PublishVersion
+  put /versions/:id/publish (PublishVersionReq) returns (PublishVersionResp)
+
+  @handler GetTypes
+  get /versions/:id/types (GetTypesReq) returns (GetTypesResp)
+
+  @handler PutTypes
+  put /versions/:id/types (PutTypesReq) returns (PutTypesResp)
+
+  @handler GetRoles
+  get /versions/:id/roles (GetRolesReq) returns (GetRolesResp)
+
+  @handler PutRoles
+  put /versions/:id/roles (PutRolesReq) returns (PutRolesResp)
+
+  @handler GetNamingRules
+  get /versions/:id/naming-rules (GetNamingRulesReq) returns (GetNamingRulesResp)
+
+  @handler PutNamingRules
+  put /versions/:id/naming-rules (PutNamingRulesReq) returns (PutNamingRulesResp)
+
+  @handler Validate
+  post /versions/:id/validate (ValidateReq) returns (ValidateResp)
+
+  @handler Simulate
+  post /versions/:id/simulate (SimulateReq) returns (SimulateResp)
+}

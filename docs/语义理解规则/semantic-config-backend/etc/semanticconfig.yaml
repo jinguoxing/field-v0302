@@ -1,0 +1,10 @@
+Name: semanticconfig-api
+Host: 0.0.0.0
+Port: 8899
+
+Log:
+  ServiceName: semanticconfig-api
+  Level: info
+
+MySQL:
+  DSN: ${SEMCFG_MYSQL_DSN}
