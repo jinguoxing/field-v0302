@@ -183,9 +183,9 @@ export const TypeDictionaryEditor: React.FC<TypeDictionaryEditorProps> = ({ conf
         "flex-shrink-0 transition-all duration-300",
         groupsCollapsed ? "w-10" : "w-56"
       )}>
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 h-full">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl space-y-3 h-full relative overflow-visible">
           {!groupsCollapsed && (
-            <>
+            <div className="p-4">
               <div className="text-sm font-semibold text-slate-100">类型分组</div>
               <div className="text-[10px] text-slate-500">按语义类别归纳</div>
               <div className="space-y-2 mt-4">
@@ -217,16 +217,21 @@ export const TypeDictionaryEditor: React.FC<TypeDictionaryEditorProps> = ({ conf
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           )}
           {/* Collapse/Expand Toggle Button */}
           <button
             onClick={() => setGroupsCollapsed(!groupsCollapsed)}
-            className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+            className={cls(
+              "absolute -right-3 top-2 z-10 p-1.5 rounded-lg transition-all shadow-lg",
+              groupsCollapsed
+                ? "bg-slate-700 hover:bg-slate-600 text-slate-300"
+                : "bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+            )}
             title={groupsCollapsed ? "展开分组" : "收起分组"}
           >
             <svg className={cls("w-4 h-4 transition-transform", groupsCollapsed && "rotate-180")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
         </div>

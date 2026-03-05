@@ -54,7 +54,7 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
 
   return (
     <aside className={cls(
-      "flex flex-col bg-slate-900/40 flex-shrink-0 transition-all duration-300",
+      "flex flex-col bg-slate-900/40 flex-shrink-0 transition-all duration-300 relative",
       collapsed ? "w-12" : "w-96"
     )}>
       <div className="p-4 border-b border-slate-800 bg-slate-900/80">
@@ -66,20 +66,27 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
             </h2>
           )}
           <div className="flex items-center gap-1">
-            <button
-              onClick={onSimulate}
-              className={`p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors ${isSimulating ? 'animate-spin' : ''}`}
-              title={collapsed ? "刷新仿真" : "刷新仿真"}
-            >
-              <RefreshCw size={12} />
-            </button>
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors"
+                className={cls(
+                  "p-1.5 rounded-md transition-colors z-10",
+                  collapsed
+                    ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg"
+                    : "bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+                )}
                 title={collapsed ? "展开仿真面板" : "收起仿真面板"}
               >
                 <ChevronLeft size={14} className={cls("transition-transform", collapsed && "rotate-180")} />
+              </button>
+            )}
+            {!collapsed && (
+              <button
+                onClick={onSimulate}
+                className={`p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors ${isSimulating ? 'animate-spin' : ''}`}
+                title="刷新仿真"
+              >
+                <RefreshCw size={12} />
               </button>
             )}
           </div>
