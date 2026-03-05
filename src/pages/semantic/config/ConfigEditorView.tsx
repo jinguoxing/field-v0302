@@ -104,6 +104,7 @@ export const ConfigEditorView: React.FC<ConfigEditorViewProps> = ({ versionId })
   const [isSimulating, setIsSimulating] = React.useState(false);
   const [baselineResult, setBaselineResult] = React.useState<SimulationResult | undefined>(undefined);
   const [whatIfResult, setWhatIfResult] = React.useState<SimulationResult | undefined>(undefined);
+  const [simulationCollapsed, setSimulationCollapsed] = React.useState(false);
 
   // Config state - using the new ConfigDomains structure
   const [config, setConfig] = React.useState<ConfigState>(() => ({
@@ -324,6 +325,8 @@ export const ConfigEditorView: React.FC<ConfigEditorViewProps> = ({ versionId })
         onModeChange={setSimMode}
         baselineResult={baselineResult}
         whatIfResult={whatIfResult}
+        collapsed={simulationCollapsed}
+        onToggleCollapse={() => setSimulationCollapsed(!simulationCollapsed)}
       />
     </div>
   );

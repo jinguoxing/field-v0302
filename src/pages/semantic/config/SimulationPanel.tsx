@@ -1,6 +1,7 @@
 import React from 'react';
-import { Play, RefreshCw, Save, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Play, RefreshCw, Save, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { SimulationSource, SimulationMode, SimulationResult, LogicView, ErrorSample, confidenceLevel, toPct } from './types';
+import { cls } from './components';
 
 interface SimulationPanelProps {
   simulationSource: SimulationSource;
@@ -17,6 +18,9 @@ interface SimulationPanelProps {
   whatIfResult?: SimulationResult;
   logicViews?: LogicView[];
   errorSamples?: ErrorSample[];
+  // Collapse state
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export const SimulationPanel: React.FC<SimulationPanelProps> = ({
@@ -40,6 +44,8 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
     { id: 'err_002', field: 'temp_col_01', table: 'fact_orders', error: 'UNKNOWN 误判为 DIM' },
     { id: 'err_003', field: 'user_phone', table: 'dim_users', error: 'NONE 误判为 FK' },
   ],
+  collapsed = false,
+  onToggleCollapse,
 }) => {
   const currentResult = mode === 'BASELINE' ? baselineResult : whatIfResult;
   const currentErrorSample = errorSamples.find(s => s.id === simulationInput);
@@ -47,20 +53,40 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
   const displayTable = currentErrorSample?.table || 'dim_users';
 
   return (
-    <aside className="w-96 flex flex-col bg-slate-900/40 flex-shrink-0">
-      <div className="p-4 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Play size={16} className="text-emerald-400" />
-          即时仿真 (Live Simulation)
-        </h2>
-        <button
-          onClick={onSimulate}
-          className={`p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors ${isSimulating ? 'animate-spin' : ''}`}
-        >
-          <RefreshCw size={12} />
-        </button>
+    <aside className={cls(
+      "flex flex-col bg-slate-900/40 flex-shrink-0 transition-all duration-300",
+      collapsed ? "w-12" : "w-96"
+    )}>
+      <div className="p-4 border-b border-slate-800 bg-slate-900/80">
+        <div className="flex items-center justify-between">
+          {!collapsed && (
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <Play size={16} className="text-emerald-400" />
+              即时仿真 (Live Simulation)
+            </h2>
+          )}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onSimulate}
+              className={`p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors ${isSimulating ? 'animate-spin' : ''}`}
+              title={collapsed ? "刷新仿真" : "刷新仿真"}
+            >
+              <RefreshCw size={12} />
+            </button>
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors"
+                title={collapsed ? "展开仿真面板" : "收起仿真面板"}
+              >
+                <ChevronLeft size={14} className={cls("transition-transform", collapsed && "rotate-180")} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
+      {!collapsed && (
       <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar relative">
         {isSimulating && (
           <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
@@ -281,7 +307,9 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
           </div>
         )}
       </div>
+      )}
 
+      {!collapsed && (
       <div className="p-4 border-t border-slate-800 bg-slate-900/80">
         <button
           onClick={onSaveAsGolden}
@@ -291,6 +319,7 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({
           保存为回归样本 (Golden Set)
         </button>
       </div>
+      )}
     </aside>
   );
 };

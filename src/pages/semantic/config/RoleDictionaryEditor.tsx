@@ -31,6 +31,9 @@ function Card({ children, title, desc }: { children: React.ReactNode; title?: st
 }
 
 export const RoleDictionaryEditor: React.FC<RoleDictionaryEditorProps> = ({ config, setConfig }) => {
+  // Collapse state for group panel
+  const [groupsCollapsed, setGroupsCollapsed] = React.useState(false);
+
   // First level: select group
   const [selectedGroup, setSelectedGroup] = React.useState<string>(() => {
     const groups = Object.keys(config.groups);
@@ -168,39 +171,56 @@ export const RoleDictionaryEditor: React.FC<RoleDictionaryEditorProps> = ({ conf
   return (
     <div className="flex gap-6">
       {/* Left: Group List */}
-      <div className="w-56 flex-shrink-0">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="text-sm font-semibold text-slate-100">角色分组</div>
-          <div className="text-[10px] text-slate-500">按功能类别归纳</div>
-          <div className="space-y-2 mt-4">
-            {groupList.map((g) => (
-              <button
-                key={g.code}
-                onClick={() => setSelectedGroup(g.code)}
-                className={cls(
-                  "w-full text-left p-3 rounded-lg transition-all",
-                  "bg-gradient-to-r",
-                  selectedGroup === g.code
-                    ? `${GROUP_COLORS[g.code] || "from-slate-600 to-slate-700"} text-white shadow-lg`
-                    : "bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-slate-200"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{GROUP_ICONS[g.code] || "📁"}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold truncate">{g.zh}</div>
-                    <div className="text-[10px] opacity-70 truncate">{g.code}</div>
-                  </div>
-                  <div className={cls(
-                    "text-xs font-bold px-1.5 py-0.5 rounded",
-                    selectedGroup === g.code ? "bg-white/20" : "bg-slate-700"
-                  )}>
-                    {g.count}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+      <div className={cls(
+        "flex-shrink-0 transition-all duration-300",
+        groupsCollapsed ? "w-10" : "w-56"
+      )}>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 h-full">
+          {!groupsCollapsed && (
+            <>
+              <div className="text-sm font-semibold text-slate-100">角色分组</div>
+              <div className="text-[10px] text-slate-500">按功能类别归纳</div>
+              <div className="space-y-2 mt-4">
+                {groupList.map((g) => (
+                  <button
+                    key={g.code}
+                    onClick={() => setSelectedGroup(g.code)}
+                    className={cls(
+                      "w-full text-left p-3 rounded-lg transition-all",
+                      "bg-gradient-to-r",
+                      selectedGroup === g.code
+                        ? `${GROUP_COLORS[g.code] || "from-slate-600 to-slate-700"} text-white shadow-lg`
+                        : "bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-slate-200"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{GROUP_ICONS[g.code] || "📁"}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold truncate">{g.zh}</div>
+                        <div className="text-[10px] opacity-70 truncate">{g.code}</div>
+                      </div>
+                      <div className={cls(
+                        "text-xs font-bold px-1.5 py-0.5 rounded",
+                        selectedGroup === g.code ? "bg-white/20" : "bg-slate-700"
+                      )}>
+                        {g.count}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {/* Collapse/Expand Toggle Button */}
+          <button
+            onClick={() => setGroupsCollapsed(!groupsCollapsed)}
+            className="absolute top-2 right-2 p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-all"
+            title={groupsCollapsed ? "展开分组" : "收起分组"}
+          >
+            <svg className={cls("w-4 h-4 transition-transform", groupsCollapsed && "rotate-180")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
         </div>
       </div>
 
