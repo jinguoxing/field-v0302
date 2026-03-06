@@ -182,6 +182,19 @@ export const Layout: React.FC = () => {
             </div>
           </div>
           
+          <div className="mb-6">
+            <p className="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+              管理科学库 (Rule Center)
+            </p>
+            <div className="space-y-0.5">
+              <SidebarItem to="/rule-center/library" icon={<Library size={18} />} label="规则库" />
+              <SidebarItem to="/rule-center/drafts" icon={<GitPullRequest size={18} />} label="草案与待审" />
+              <SidebarItem to="/rule-center/health" icon={<ShieldCheck size={18} />} label="规则体检" />
+              <SidebarItem to="/rule-center/groups" icon={<Layers size={18} />} label="规则群" />
+              <SidebarItem to="/rule-center/policies" icon={<FileText size={18} />} label="制度文件" />
+            </div>
+          </div>
+          
           <div>
             <p className="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">系统管理</p>
             <SidebarItem to="/settings" icon={<Settings size={18} />} label="配置中心" />
@@ -216,6 +229,11 @@ export const Layout: React.FC = () => {
                 <>
                    <span className="mx-2 text-slate-600">/</span>
                    <span className="text-cyan-400 font-bold">语义建模</span>
+                </>
+             ) : location.pathname.startsWith('/rule-center') ? (
+                <>
+                   <span className="mx-2 text-slate-600">/</span>
+                   <span className="text-indigo-400 font-bold">管理科学库</span>
                 </>
              ) : (
                 <>
@@ -263,7 +281,31 @@ export const Layout: React.FC = () => {
              {location.pathname.includes('library') && (
                 <>
                    <span className="mx-2 text-slate-600">/</span>
-                   <span className="text-cyan-400 font-bold">标准库</span>
+                   <span className="text-cyan-400 font-bold">{location.pathname.includes('rule-center') ? '规则库' : '标准库'}</span>
+                </>
+             )}
+             {location.pathname.includes('drafts') && (
+                <>
+                   <span className="mx-2 text-slate-600">/</span>
+                   <span className="text-amber-400 font-bold">草案与待审</span>
+                </>
+             )}
+             {location.pathname.includes('health') && (
+                <>
+                   <span className="mx-2 text-slate-600">/</span>
+                   <span className="text-emerald-400 font-bold">规则体检</span>
+                </>
+             )}
+             {location.pathname.includes('groups') && (
+                <>
+                   <span className="mx-2 text-slate-600">/</span>
+                   <span className="text-indigo-400 font-bold">规则群</span>
+                </>
+             )}
+             {location.pathname.includes('policies') && (
+                <>
+                   <span className="mx-2 text-slate-600">/</span>
+                   <span className="text-blue-400 font-bold">制度文件</span>
                 </>
              )}
           </div>

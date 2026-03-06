@@ -27,6 +27,16 @@ import { CollabInboxPage } from './pages/CollabInboxPage';
 import { CollabHistoryPage } from './pages/CollabHistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SemanticConfigPage } from './src/pages/semantic/SemanticConfigPage';
+// Rule Center
+import { RuleLibraryPage } from './src/pages/rule-center/RuleLibraryPage';
+import { DraftsPage } from './src/pages/rule-center/DraftsPage';
+import { DraftEditorPage } from './src/pages/rule-center/DraftEditorPage';
+import { RuleWorkbenchResolvePage } from './src/pages/rule-center/RuleWorkbenchResolvePage';
+import { HealthCheckPage } from './src/pages/rule-center/HealthCheckPage';
+import { RuleGroupsPage } from './src/pages/rule-center/RuleGroupsPage';
+import { RuleGroupTimelinePage } from './src/pages/rule-center/RuleGroupTimelinePage';
+import { PoliciesPage } from './src/pages/rule-center/PoliciesPage';
+import { PolicyDetailPage } from './src/pages/rule-center/PolicyDetailPage';
 // AI Ops Workbench
 import { AIOpsWorkbenchPage } from './src/pages/aiops/AIOpsWorkbenchPage';
 import { AIOpsRequestDetailPage } from './src/pages/aiops/AIOpsRequestDetailPage';
@@ -108,6 +118,17 @@ const App: React.FC = () => {
           {/* Ops Measurement Routes */}
           <Route path="standards/ops" element={<Navigate to="/standards/ops/dashboard" replace />} />
           <Route path="standards/ops/dashboard" element={<OpsPage />} />
+
+          {/* Rule Center Routes */}
+          <Route path="rule-center/library" element={<RuleLibraryPage />} />
+          <Route path="rule-center/drafts" element={<DraftsPage />} />
+          <Route path="rule-center/drafts/:draftId" element={<DraftEditorPage />} />
+          <Route path="rule-center/workbench/:draftId" element={<RuleWorkbenchResolvePage />} />
+          <Route path="rule-center/health" element={<HealthCheckPage />} />
+          <Route path="rule-center/groups" element={<RuleGroupsPage />} />
+          <Route path="rule-center/groups/:groupId" element={<RuleGroupTimelinePage />} />
+          <Route path="rule-center/policies" element={<PoliciesPage />} />
+          <Route path="rule-center/policies/:policyId" element={<PolicyDetailPage />} />
 
           {/* AI Ops Workbench Routes */}
           <Route path="aiops/workbench" element={<AIOpsWorkbenchPage />} />
